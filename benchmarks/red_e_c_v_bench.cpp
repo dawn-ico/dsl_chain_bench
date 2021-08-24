@@ -41,10 +41,17 @@ int main() {
 
   fill_random(in_field_nested, in_size);
   cudaMemcpy(in_field_sequential, in_field_nested, in_size*sizeof(double), cudaMemcpyDeviceToDevice);
+  
+  gpu_tri_mesh.set_splitter_index_lower(dawn::LocationType::Cells, dawn::UnstructuredSubdomain::Nudging, 0, 3160);
+  gpu_tri_mesh.set_splitter_index_lower(dawn::LocationType::Edges, dawn::UnstructuredSubdomain::Nudging, 0, 5134);
+  gpu_tri_mesh.set_splitter_index_lower(dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Nudging, 0, 1209);
 
-  cudaStream_t stream;
-  inlined::setup_red_e_c_v(&gpu_tri_mesh, num_lev, stream);
-  sequential::setup_red_e_c_v(&gpu_tri_mesh, num_lev, stream);
+  gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Cells, dawn::UnstructuredSubdomain::Halo, 0, 20339);
+  gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Edges, dawn::UnstructuredSubdomain::Halo, 0, 30714);
+  gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Halo, 0, 10375);
+  
+  inlined::setup_red_e_c_v(&gpu_tri_mesh, num_lev, CU_STREAM_LEGACY);
+  sequential::setup_red_e_c_v(&gpu_tri_mesh, num_lev, CU_STREAM_LEGACY);
 
   double time_nested = run_and_time(inlined::run_red_e_c_v, in_field_nested, out_field_nested);
   double time_sequential = run_and_time(sequential::run_red_e_c_v, in_field_sequential, out_field_sequential);

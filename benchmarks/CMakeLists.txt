@@ -140,5 +140,6 @@ foreach(sten ${stencils})
     target_link_libraries(${sten}_bench PRIVATE thrustUtils)
     target_link_libraries(${sten}_bench PRIVATE ${sten})
     target_link_libraries(${sten}_bench PRIVATE atlasUtilsLib)    
-
 endforeach()
+
+configure_file(resources/grid.nc ${PROJECT_BINARY_DIR}/grid.nc COPYONLY)
