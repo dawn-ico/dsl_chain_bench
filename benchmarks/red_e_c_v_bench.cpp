@@ -1,33 +1,14 @@
 #include "atlasToGlobalGpuTriMesh.h"
+#include "thrustUtils.h"
 
-struct prg {    
-    __host__ __device__
-        double operator()(const unsigned int n) const
-        {
-            thrust::default_random_engine rng;
-            thrust::uniform_real_distribution<double> dist(0, 1);
-            rng.discard(n);
-            return dist(rng);
-        }
-};
-
-void fill_randon(double *dev_field, int num_el) {
-  thrust::device_ptr<double> dev_ptr = thrust::device_pointer_cast(dev_field);  
-  thrust::counting_iterator<unsigned int> index_sequence_begin(0);
-
-  thrust::transform(index_sequence_begin, index_sequence_begin + num_el,
-            dev_ptr, prg());
+namespace inlined {
+  #include "red_e_c_v_inline.h"
 }
 
-bool verify(double *left, double *right, int num_el, double tolerance) {
-  thrust::device_vector<double> diff(num_el);
-  thrust::devive_ptr<double> left_p = thrust::device_pointer_cast(left);  
-  thrust::devive_ptr<double> right_p = thrust::device_pointer_cast(right);  
-  thrust::transform(left_p, left_p + num_el, right_p, diff.begin(), thrust::minus<double>)
-  thrust::transform(diff.begin(), diff.end(), diff.begin(), thrust::abs<double>);
-  thrust::device_vector<double>::iterator max_iter = thrust::max_element(diff.begin(), diff.end());
-  return *max_iter < tolerance;
+namespace sequential {
+  #include "red_e_c_v_sequential.h"
 }
+
 
 template<typename... Args>
 double run_and_time(void (*fun) (Args... args), Args... args) {
@@ -36,7 +17,7 @@ double run_and_time(void (*fun) (Args... args), Args... args) {
   cudaEventCreate(&stop);
   fun(args...);
   cudaEventSynchronize(stop);
-  double milliseconds = 0;
+  float milliseconds = 0;
   cudaEventElapsedTime(&milliseconds, start, stop);
   return milliseconds;
 }
@@ -46,31 +27,31 @@ int main() {
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
   const int num_lev = 80;
 
-  const size_t in_size = sizeof(double)*mesh.nodes().size()*num_lev;
-  const size_t out_size = sizeof(double)*mesh.edges().size()*num_lev;
+  const size_t in_size = mesh.nodes().size()*num_lev;
+  const size_t out_size = mesh.edges().size()*num_lev;
   double *in_field_nested, *out_field_nested;
   double *in_field_sequential, *out_field_sequential;
   
-  cudaMalloc((void**)&in_field_nested, in_size);
-  cudaMalloc((void**)&out_field_nested, out_size);
-  cudaMalloc((void**)&in_field_sequential, in_size);
-  cudaMalloc((void**)&out_field_sequential, out_size);
+  cudaMalloc((void**)&in_field_nested, in_size*sizeof(double));
+  cudaMalloc((void**)&out_field_nested, out_size*sizeof(double));
+  cudaMalloc((void**)&in_field_sequential, in_size*sizeof(double));
+  cudaMalloc((void**)&out_field_sequential, out_size*sizeof(double));
 
   fill_random(in_field_nested, in_size);
-  cudaMemcpy(in_field_sequential, in_field_nested, in_size, cudaMemcpyDeviceToDevice);
+  cudaMemcpy(in_field_sequential, in_field_nested, in_size*sizeof(double), cudaMemcpyDeviceToDevice);
 
   cudaStream_t stream;
-  setup_red_e_c_v_inlined(gpu_tri_mesh, num_lev, stream);
-  setup_red_e_c_v_sequential(gpu_tri_mesh, num_lev, stream);
+  inlined::setup_red_e_c_v(&gpu_tri_mesh, num_lev, stream);
+  sequential::setup_red_e_c_v(&gpu_tri_mesh, num_lev, stream);
 
-  double time_nested = run_and_time(run_e_c_v_nested, in_field_nested, out_field_nested);
-  double time_sequential = run_and_time(run_e_c_v_sequential, in_field_sequential, out_field_sequential);
+  double time_nested = run_and_time(inlined::run_red_e_c_v, in_field_nested, out_field_nested);
+  double time_sequential = run_and_time(sequential::run_red_e_c_v, in_field_sequential, out_field_sequential);
 
   printf("E > C > V: seq %e nest %e\n", time_nested, time_sequential);
 
-  bool verify(out_field_nested, out_field_sequential);
-  if (!verify) {
-    printf("[FAIL] Failed Verification!")
+  bool valid_result = verify(out_field_nested, out_field_sequential, out_size, 1e-12);
+  if (!valid_result) {
+    printf("[FAIL] Failed Verification!");
   }
 
   return 0;

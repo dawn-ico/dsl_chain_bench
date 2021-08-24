@@ -27,6 +27,7 @@ if(NOT EXISTS "${dawn4py_DIR}")
   message(FATAL_ERROR "Cannot find include path (dawn4py).")
 endif()
 
+find_package(atlas CONFIG REQUIRED) 
 
 ### Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
@@ -52,56 +53,89 @@ else()
   set(TOOLCHAINPATH "$ENV{PATH}" CACHE INTERNAL "Path variable with directories to search tools in")
 endif()
 
-set(dusk_stencils "")
+add_subdirectory(utils)
 
-function (add_stencil stencil levels_per_thread block_size)
+function (add_stencil stencil levels_per_thread block_size inline)
+
+  if (inline)
+    set(sten_name ${stencil}_inline)
+    set(dawn_args --default-opt --pass-groups set-loop-order,temporary-inlining)
+  else()
+    set(sten_name ${stencil}_sequential)
+    set(dawn_args --default-opt --pass-groups set-loop-order)
+  endif()  
+
+  message(${sten_name})
+
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.sir
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${stencil}.py
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONHOME=${PYTHONHOME} PYTHONPATH=${PYTHONPATH} PATH="${TOOLCHAINPATH}"
-      dusk-front ${CMAKE_CURRENT_SOURCE_DIR}/${stencil}.py > ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.sir
+      dusk-front ${CMAKE_CURRENT_SOURCE_DIR}/${stencil}.py > ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
   )
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.sir
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E env PATH="${TOOLCHAINPATH}"
-      dawn-opt --default-opt --pass-groups set-loop-order -o ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.sir
+      dawn-opt ${dawn_args} -o ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
   )
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.cpp ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.f90 ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.h
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.cpp ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.f90 ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.h
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E env PATH="${TOOLCHAINPATH}"
       dawn-codegen -b cuda-ico
-      -o ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.cpp
-      --output-f90-interface ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.f90
-      --output-c-header ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.h
+      -o ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.cpp      
+      --output-c-header ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.h
       --block-size ${block_size}
       --levels-per-thread ${levels_per_thread}
-      ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir
-  )
-  set(dusk_stencils ${dusk_stencils} ${stencil} PARENT_SCOPE)
-
-  set_source_files_properties(
-    ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.f90
-    PROPERTIES Fortran_PREPROCESS ON
-  )
+      ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir
+  )    
 endfunction()
 
-add_stencil("red_e_c_v" 128 1)
+file(GLOB stencils_py CONFIGURE_DEPENDS "*.py")
+set(stencils)
+foreach (sten ${stencils_py})
+    get_filename_component(cur_sten ${sten} NAME_WE)     
+    list(APPEND stencils ${cur_sten})
+endforeach()
 
-list(TRANSFORM dusk_stencils PREPEND ${CMAKE_CURRENT_BINARY_DIR}/
-     OUTPUT_VARIABLE dusk_stencils_paths)
+foreach (sten ${stencils})
+  add_stencil(${sten} 128 1 TRUE)
+  add_stencil(${sten} 128 1 FALSE)
+endforeach()
 
-set(dusk_stencil_cpp_sources ${dusk_stencils_paths})
+foreach(sten ${stencils})    
+    set(sten_bench ${CMAKE_CURRENT_LIST_DIR}/${sten}_bench.cpp)
+    set(sten_sequential ${CMAKE_CURRENT_BINARY_DIR}/${sten}_sequential.cpp)
+    set(sten_inline ${CMAKE_CURRENT_BINARY_DIR}/${sten}_inline.cpp)    
 
-list(TRANSFORM dusk_stencil_cpp_sources APPEND .cpp)
+    add_library(${sten} STATIC
+      ${sten_sequential}
+      ${sten_inline}
+      ${dawn4py_DIR}/driver-includes/to_vtk.cpp
+      ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
+      ${dawn4py_DIR}/driver-includes/cuda_verify.cpp)
 
-add_executable(sten 
-  ${dusk_stencil_cpp_sources}    
-  ${dawn4py_DIR}/driver-includes/to_vtk.cpp
-  ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
-  ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
-)
+    set_source_files_properties(
+      ${sten_sequential}
+      ${sten_inline}   
+      ${dawn4py_DIR}/driver-includes/to_vtk.cpp
+      ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
+      ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
+      PROPERTIES LANGUAGE CUDA)    
+      
+    target_include_directories(${sten} PUBLIC ${dawn4py_DIR})
+
+    add_executable(${sten}_bench
+      ${sten_bench}            
+    )
+    target_include_directories(${sten}_bench PRIVATE ${dawn4py_DIR})
+    target_include_directories(${sten}_bench PRIVATE ${CMAKE_CURRENT_LIST_DIR}/utils)
+    target_include_directories(${sten}_bench PRIVATE ${CMAKE_BINARY_DIR})
+    target_link_libraries(${sten}_bench PRIVATE atlas)
+    target_link_libraries(${sten}_bench PRIVATE thrustUtils)
+    target_link_libraries(${sten}_bench PRIVATE ${sten_name})
+endforeach()
