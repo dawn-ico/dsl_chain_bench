@@ -27,7 +27,8 @@ if(NOT EXISTS "${dawn4py_DIR}")
   message(FATAL_ERROR "Cannot find include path (dawn4py).")
 endif()
 
-find_package(atlas CONFIG REQUIRED) 
+find_package(atlas CONFIG REQUIRED)
+find_package(atlas_utils CONFIG REQUIRED) 
 
 ### Require out-of-source builds
 file(TO_CMAKE_PATH "${PROJECT_BINARY_DIR}/CMakeLists.txt" LOC_PATH)
@@ -64,8 +65,6 @@ function (add_stencil stencil levels_per_thread block_size inline)
     set(sten_name ${stencil}_sequential)
     set(dawn_args --default-opt --pass-groups set-loop-order)
   endif()  
-
-  message(${sten_name})
 
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
@@ -130,12 +129,16 @@ foreach(sten ${stencils})
     target_include_directories(${sten} PUBLIC ${dawn4py_DIR})
 
     add_executable(${sten}_bench
-      ${sten_bench}            
+      ${sten_bench}
+      ${CMAKE_CURRENT_LIST_DIR}/utils/atlasToGlobalGpuTriMesh.cpp
     )
     target_include_directories(${sten}_bench PRIVATE ${dawn4py_DIR})
     target_include_directories(${sten}_bench PRIVATE ${CMAKE_CURRENT_LIST_DIR}/utils)
     target_include_directories(${sten}_bench PRIVATE ${CMAKE_BINARY_DIR})
+    target_include_directories(${sten}_bench PRIVATE ${atlas_utils_INCLUDE_DIRS})    
     target_link_libraries(${sten}_bench PRIVATE atlas)
     target_link_libraries(${sten}_bench PRIVATE thrustUtils)
-    target_link_libraries(${sten}_bench PRIVATE ${sten_name})
+    target_link_libraries(${sten}_bench PRIVATE ${sten})
+    target_link_libraries(${sten}_bench PRIVATE atlasUtilsLib)    
+
 endforeach()

@@ -1,6 +1,8 @@
 #include "atlasToGlobalGpuTriMesh.h"
 #include "thrustUtils.h"
 
+#include "atlas_utils/utils/AtlasFromNetcdf.h"
+
 namespace inlined {
   #include "red_e_c_v_inline.h"
 }
@@ -23,7 +25,7 @@ double run_and_time(void (*fun) (Args... args), Args... args) {
 }
 
 int main() {
-  atlas::Mesh mesh = AtlasMeshFromNetCDFComplete("grid.nc");
+  atlas::Mesh mesh = *AtlasMeshFromNetCDFComplete("grid.nc");
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
   const int num_lev = 80;
 
