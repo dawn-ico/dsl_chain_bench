@@ -39,5 +39,6 @@ bool verify(double *left, double *right, int num_el, double tolerance) {
   thrust::transform(left_p, left_p + num_el, right_p, diff.begin(), thrust::minus<double>{});
   thrust::transform(diff.begin(), diff.end(), diff.begin(), absolute_value<double>{});
   thrust::device_vector<double>::iterator max_iter = thrust::max_element(diff.begin(), diff.end());
-  return *max_iter < tolerance;
+  double max_error = *max_iter;  
+  return max_error < tolerance;
 }
