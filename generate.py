@@ -53,7 +53,7 @@ with open('templates/red_simple_bench.cpp', 'r') as bench_file, open('templates/
   bench_lines = [line.rstrip() for line in bench_lines]
   sten_lines = sten_file.readlines()
   sten_lines = [line.rstrip() for line in sten_lines]
-  for chain in chains[:1]:
+  for chain in chains:
       with open('benchmarks/red_{}_bench.cpp'.format(chain_to_letters(chain)), "w+") as bench_out_file:
         for line in bench_lines:
           print(fill_template(line, chain), file=bench_out_file)
