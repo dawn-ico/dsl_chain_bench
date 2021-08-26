@@ -19,6 +19,8 @@ chains = [[Location.Edge, Location.Cell, Location.Vertex],
           [Location.Cell, Location.Vertex, Location.Edge],
           [Location.Cell, Location.Vertex, Location.Cell]]
 
+versions = ["inline", "sequential"]
+
 loc_to_char = {Location.Edge: "e", Location.Cell: "c", Location.Vertex: "v"}
 loc_to_atlas = {Location.Edge: "edges()", Location.Cell: "cells()", Location.Vertex: "nodes()"}
 
@@ -34,7 +36,7 @@ def chain_to_print(chain):
     ret += loc_to_char[loc].upper() + " > "
   return ret[:-3]
 
-def fill_template(line, chain):
+def fill_template(line, chain, version=""):
   line = line.replace("{CHAIN_LETTERS}", chain_to_letters(chain))
   line = line.replace("{CHAIN_PRINT}", chain_to_print(chain))
   line = line.replace("{CHAIN_0}", chain[0].name)
@@ -43,6 +45,7 @@ def fill_template(line, chain):
   line = line.replace("{CHAIN_0_MESH}", "mesh." + loc_to_atlas[chain[0]])
   line = line.replace("{CHAIN_1_MESH}", "mesh." + loc_to_atlas[chain[1]])
   line = line.replace("{CHAIN_2_MESH}", "mesh." + loc_to_atlas[chain[2]])
+  line = line.replace("{VERSION}", version)  
   return line
 
 with open('templates/red_simple_bench.cpp', 'r') as bench_file, open('templates/red_simple.py', 'r') as sten_file:
@@ -50,10 +53,14 @@ with open('templates/red_simple_bench.cpp', 'r') as bench_file, open('templates/
   bench_lines = [line.rstrip() for line in bench_lines]
   sten_lines = sten_file.readlines()
   sten_lines = [line.rstrip() for line in sten_lines]
-  for chain in chains:
-      with open('benchmarks/red_{}_bench.cpp'.format(chain_to_letters(chain)), "w+") as bench_out_file, open('benchmarks/red_{}.py'.format(chain_to_letters(chain)), "w+") as sten_out_file:
+  for chain in chains[:1]:
+      with open('benchmarks/red_{}_bench.cpp'.format(chain_to_letters(chain)), "w+") as bench_out_file:
         for line in bench_lines:
           print(fill_template(line, chain), file=bench_out_file)
-        for line in sten_lines:
-          print(fill_template(line, chain), file=sten_out_file)
+        with open('benchmarks/red_{}_inline.py'.format(chain_to_letters(chain)), "w+") as sten_out_inl_file, \
+              open('benchmarks/red_{}_sequential.py'.format(chain_to_letters(chain)), "w+") as sten_out_seq_file:
+          for line in sten_lines:
+            print(fill_template(line, chain, "inline"), file=sten_out_inl_file)
+          for line in sten_lines:
+            print(fill_template(line, chain, "sequential"), file=sten_out_seq_file)
         

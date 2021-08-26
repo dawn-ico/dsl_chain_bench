@@ -5,14 +5,8 @@
 
 #include <numeric>
 
-namespace inlined {
-  #include "red_{CHAIN_LETTERS}_inline.h"
-}
-
-namespace sequential {
-  #include "red_{CHAIN_LETTERS}_sequential.h"
-}
-
+#include "red_{CHAIN_LETTERS}_inline.h"
+#include "red_{CHAIN_LETTERS}_sequential.h"
 
 template<typename... Args>
 double run_and_time(void (*fun) (Args... args), Args... args) {
@@ -55,13 +49,13 @@ int main() {
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Edges, dawn::UnstructuredSubdomain::Halo, 0, 30714);
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Halo, 0, 10375);
   
-  inlined::setup_red_{CHAIN_LETTERS}(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
-  sequential::setup_red_{CHAIN_LETTERS}(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);  
+  setup_red_{CHAIN_LETTERS}_inline(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
+  setup_red_{CHAIN_LETTERS}_sequential(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);  
 
   std::vector<double> times_inlined, times_sequential;
   for (int i = 0; i < num_runs; i++) {
-    double time_inlined = run_and_time(inlined::run_red_{CHAIN_LETTERS}, in_field_inlined, out_field_inlined);
-    double time_sequential = run_and_time(sequential::run_red_{CHAIN_LETTERS}, in_field_sequential, out_field_sequential);
+    double time_inlined = run_and_time(run_red_{CHAIN_LETTERS}_inline, in_field_inlined, out_field_inlined);
+    double time_sequential = run_and_time(run_red_{CHAIN_LETTERS}_sequential, in_field_sequential, out_field_sequential);
     times_inlined.push_back(time_inlined);
     times_sequential.push_back(time_sequential);
   }

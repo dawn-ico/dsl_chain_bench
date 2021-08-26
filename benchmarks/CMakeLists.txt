@@ -57,40 +57,35 @@ endif()
 add_subdirectory(utils)
 
 function (add_stencil stencil levels_per_thread block_size inline)
-
-  if (inline)
-    set(sten_name ${stencil}_inline)
+  message("AAAAAA " ${stencil})
+  if (inline)    
     set(dawn_args --default-opt --pass-groups set-loop-order,temporary-inlining)
-  else()
-    set(sten_name ${stencil}_sequential)
+  else()    
     set(dawn_args --default-opt --pass-groups set-loop-order)
   endif()  
 
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${stencil}.py
+  add_custom_target(${stencil}_sir   
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONHOME=${PYTHONHOME} PYTHONPATH=${PYTHONPATH} PATH="${TOOLCHAINPATH}"
-      dusk-front ${CMAKE_CURRENT_SOURCE_DIR}/${stencil}.py > ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
-  )
-  add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
+      dusk-front ${CMAKE_CURRENT_SOURCE_DIR}/${stencil}.py > ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.sir
+  ) 
+  add_custom_target(${stencil}_iir
+    DEPENDS ${stencil}_sir
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E env PATH="${TOOLCHAINPATH}"
-      dawn-opt ${dawn_args} -o ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.sir
+      dawn-opt ${dawn_args} -o ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.sir
   )
   add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.cpp ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.f90 ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.h
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir
+    OUTPUT ${stencil}.cpp
+    DEPENDS ${stencil}_iir
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E env PATH="${TOOLCHAINPATH}"
       dawn-codegen -b cuda-ico
-      -o ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.cpp      
-      --output-c-header ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.h
+      -o ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.cpp      
+      --output-c-header ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.h
       --block-size ${block_size}
       --levels-per-thread ${levels_per_thread}
-      ${CMAKE_CURRENT_BINARY_DIR}/${sten_name}.iir
+      ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir
   )    
 endfunction()
 
@@ -102,44 +97,63 @@ foreach (sten ${stencils_py})
 endforeach()
 
 foreach (sten ${stencils})
-  add_stencil(${sten} 128 1 TRUE)
-  add_stencil(${sten} 128 1 FALSE)
+  if (${sten} MATCHES ".*inline")
+    message("AQQQQQ")
+    add_stencil(${sten} 128 1 TRUE)
+  else()
+    message("FFFFF" ${sten})
+    add_stencil(${sten} 128 1 FALSE)
+  endif()
 endforeach()
 
-foreach(sten ${stencils})    
-    set(sten_bench ${CMAKE_CURRENT_LIST_DIR}/${sten}_bench.cpp)
-    set(sten_sequential ${CMAKE_CURRENT_BINARY_DIR}/${sten}_sequential.cpp)
-    set(sten_inline ${CMAKE_CURRENT_BINARY_DIR}/${sten}_inline.cpp)    
+function (compile_benchmark sten_full_path)   
+  get_filename_component(sten_bench ${sten_full_path} NAME_WE) 
+  string(REPLACE "_bench" "" sten ${sten_bench})    
+  
+  set(sten_inline_full_path ${CMAKE_BINARY_DIR}/${sten}_inline.cpp)
+  set(sten_sequential_full_path ${CMAKE_BINARY_DIR}/${sten}_sequential.cpp)
+ 
+  message("KKKK " ${sten_inline_full_path})
+  message("KKKK " ${sten_sequential_full_path})
 
-    add_library(${sten} STATIC
-      ${sten_sequential}
-      ${sten_inline}
-      ${dawn4py_DIR}/driver-includes/to_vtk.cpp
-      ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
-      ${dawn4py_DIR}/driver-includes/cuda_verify.cpp)
+  set_source_files_properties(
+    ${sten_inline_full_path}   
+    ${sten_sequential_full_path}
+    ${dawn4py_DIR}/driver-includes/to_vtk.cpp
+    ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
+    ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
+    PROPERTIES LANGUAGE CUDA)    
+  
+  add_library(${sten} STATIC
+    ${sten_inline_full_path}    
+    ${sten_sequential_full_path}
+    ${dawn4py_DIR}/driver-includes/to_vtk.cpp
+    ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
+    ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
+  )    
+  
+  add_executable(${sten_bench}
+    ${sten_full_path}
+    ${CMAKE_CURRENT_LIST_DIR}/utils/atlasToGlobalGpuTriMesh.cpp
+  )
+  
+  target_include_directories(${sten} PUBLIC ${dawn4py_DIR})
+  message("XXXX " ${sten}_inline)
+  message("XXXX " ${sten}_sequential)  
 
-    set_source_files_properties(
-      ${sten_sequential}
-      ${sten_inline}   
-      ${dawn4py_DIR}/driver-includes/to_vtk.cpp
-      ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
-      ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
-      PROPERTIES LANGUAGE CUDA)    
-      
-    target_include_directories(${sten} PUBLIC ${dawn4py_DIR})
+  target_include_directories(${sten_bench} PRIVATE ${dawn4py_DIR})
+  target_include_directories(${sten_bench} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/utils)
+  target_include_directories(${sten_bench} PRIVATE ${CMAKE_BINARY_DIR})
+  target_include_directories(${sten_bench} PRIVATE ${atlas_utils_INCLUDE_DIRS})    
+  target_link_libraries(${sten_bench} PRIVATE atlas)
+  target_link_libraries(${sten_bench} PRIVATE thrustUtils)
+  target_link_libraries(${sten_bench} PRIVATE ${sten})
+  target_link_libraries(${sten_bench} PRIVATE atlasUtilsLib)   
+endfunction()
 
-    add_executable(${sten}_bench
-      ${sten_bench}
-      ${CMAKE_CURRENT_LIST_DIR}/utils/atlasToGlobalGpuTriMesh.cpp
-    )
-    target_include_directories(${sten}_bench PRIVATE ${dawn4py_DIR})
-    target_include_directories(${sten}_bench PRIVATE ${CMAKE_CURRENT_LIST_DIR}/utils)
-    target_include_directories(${sten}_bench PRIVATE ${CMAKE_BINARY_DIR})
-    target_include_directories(${sten}_bench PRIVATE ${atlas_utils_INCLUDE_DIRS})    
-    target_link_libraries(${sten}_bench PRIVATE atlas)
-    target_link_libraries(${sten}_bench PRIVATE thrustUtils)
-    target_link_libraries(${sten}_bench PRIVATE ${sten})
-    target_link_libraries(${sten}_bench PRIVATE atlasUtilsLib)    
+file(GLOB benches CONFIGURE_DEPENDS "*_bench.cpp")
+foreach(sten ${benches})    
+  compile_benchmark(${sten}) 
 endforeach()
 
 configure_file(resources/grid.nc ${PROJECT_BINARY_DIR}/grid.nc COPYONLY)

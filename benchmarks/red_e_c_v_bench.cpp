@@ -5,14 +5,8 @@
 
 #include <numeric>
 
-namespace inlined {
-  #include "red_e_c_v_inline.h"
-}
-
-namespace sequential {
-  #include "red_e_c_v_sequential.h"
-}
-
+#include "red_e_c_v_inline.h"
+#include "red_e_c_v_sequential.h"
 
 template<typename... Args>
 double run_and_time(void (*fun) (Args... args), Args... args) {
@@ -31,7 +25,7 @@ double run_and_time(void (*fun) (Args... args), Args... args) {
 int main() {
   atlas::Mesh mesh = *AtlasMeshFromNetCDFComplete("grid.nc");
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
-  const int num_lev = 80;
+  const int num_lev = 65;
   const int num_runs = 100000;
 
   const size_t in_size = mesh.nodes().size()*num_lev;
@@ -55,13 +49,13 @@ int main() {
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Edges, dawn::UnstructuredSubdomain::Halo, 0, 30714);
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Halo, 0, 10375);
 
-  inlined::setup_red_e_c_v(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
-  sequential::setup_red_e_c_v(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
+  setup_red_e_c_v_inline(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
+  setup_red_e_c_v_sequential(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
 
   std::vector<double> times_inlined, times_sequential;
   for (int i = 0; i < num_runs; i++) {
-    double time_inlined = run_and_time(inlined::run_red_e_c_v, in_field_inlined, out_field_inlined);
-    double time_sequential = run_and_time(sequential::run_red_e_c_v, in_field_sequential, out_field_sequential);
+    double time_inlined = run_and_time(run_red_e_c_v_inline, in_field_inlined, out_field_inlined);
+    double time_sequential = run_and_time(run_red_e_c_v_sequential, in_field_sequential, out_field_sequential);
     times_inlined.push_back(time_inlined);
     times_sequential.push_back(time_sequential);
   }
