@@ -1,6 +1,8 @@
 from enum import Enum
 import itertools
 
+NAME="int_diff"
+
 class Location(Enum):
   Edge = 0
   Cell = 1
@@ -36,6 +38,16 @@ def chain_to_print(chain):
     ret += loc_to_char[loc].upper() + " > "
   return ret[:-3]
 
+def sparse_size(chain_left, chain_right):
+  sizes = {(Location.Edge, Location.Cell)   : 2,
+           (Location.Edge, Location.Vertex) : 2,
+           (Location.Cell, Location.Vertex) : 3,
+           (Location.Cell, Location.Edge)   : 3,
+           (Location.Vertex, Location.Edge) : 6,
+           (Location.Vertex, Location.Cell) : 6}
+  return sizes[(chain_left, chain_right)]
+
+
 def fill_template(line, chain, version=""):
   line = line.replace("{CHAIN_LETTERS}", chain_to_letters(chain))
   line = line.replace("{CHAIN_PRINT}", chain_to_print(chain))
@@ -46,19 +58,20 @@ def fill_template(line, chain, version=""):
   line = line.replace("{CHAIN_1_MESH}", "mesh." + loc_to_atlas[chain[1]])
   line = line.replace("{CHAIN_2_MESH}", "mesh." + loc_to_atlas[chain[2]])
   line = line.replace("{VERSION}", version)  
+  line = line.replace("{SPARSE_12}", str(sparse_size(chain[1],chain[2])))
   return line
 
-with open('templates/red_simple_bench.cpp', 'r') as bench_file, open('templates/red_simple.py', 'r') as sten_file:
+with open('templates/red_{}_bench.cpp'.format(NAME), 'r') as bench_file, open('templates/red_{}.py'.format(NAME), 'r') as sten_file:
   bench_lines = bench_file.readlines()
   bench_lines = [line.rstrip() for line in bench_lines]
   sten_lines = sten_file.readlines()
   sten_lines = [line.rstrip() for line in sten_lines]
   for chain in chains:
-      with open('benchmarks/red_{}_bench.cpp'.format(chain_to_letters(chain)), "w+") as bench_out_file:
+      with open('benchmarks/red_{}_{}_bench.cpp'.format(NAME, chain_to_letters(chain)), "w+") as bench_out_file:
         for line in bench_lines:
           print(fill_template(line, chain), file=bench_out_file)
-        with open('benchmarks/red_{}_inline.py'.format(chain_to_letters(chain)), "w+") as sten_out_inl_file, \
-              open('benchmarks/red_{}_sequential.py'.format(chain_to_letters(chain)), "w+") as sten_out_seq_file:
+        with open('benchmarks/red_{}_{}_inline.py'.format(NAME, chain_to_letters(chain)), "w+") as sten_out_inl_file, \
+              open('benchmarks/red_{}_{}_sequential.py'.format(NAME, chain_to_letters(chain)), "w+") as sten_out_seq_file:
           for line in sten_lines:
             print(fill_template(line, chain, "inline"), file=sten_out_inl_file)
           for line in sten_lines:

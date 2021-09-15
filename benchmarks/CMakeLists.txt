@@ -56,8 +56,7 @@ endif()
 
 add_subdirectory(utils)
 
-function (add_stencil stencil levels_per_thread block_size inline)
-  message("AAAAAA " ${stencil})
+function (add_stencil stencil levels_per_thread block_size inline) 
   if (inline)    
     set(dawn_args --default-opt --pass-groups set-loop-order,temporary-inlining)
   else()    
@@ -97,12 +96,10 @@ foreach (sten ${stencils_py})
 endforeach()
 
 foreach (sten ${stencils})
-  if (${sten} MATCHES ".*inline")
-    message("AQQQQQ")
-    add_stencil(${sten} 128 1 TRUE)
-  else()
-    message("FFFFF" ${sten})
-    add_stencil(${sten} 128 1 FALSE)
+  if (${sten} MATCHES ".*inline")   
+    add_stencil(${sten} 1 128 TRUE)
+  else()   
+    add_stencil(${sten} 1 128 FALSE)
   endif()
 endforeach()
 
@@ -111,14 +108,11 @@ function (compile_benchmark sten_full_path)
   string(REPLACE "_bench" "" sten ${sten_bench})    
   
   set(sten_inline_full_path ${CMAKE_BINARY_DIR}/${sten}_inline.cpp)
-  set(sten_sequential_full_path ${CMAKE_BINARY_DIR}/${sten}_sequential.cpp)
- 
-  message("KKKK " ${sten_inline_full_path})
-  message("KKKK " ${sten_sequential_full_path})
+  set(sten_sequential_full_path ${CMAKE_BINARY_DIR}/${sten}_sequential.cpp) 
 
   set_source_files_properties(
     ${sten_inline_full_path}   
-    ${sten_sequential_full_path}
+    ${sten_sequential_full_path}    
     ${dawn4py_DIR}/driver-includes/to_vtk.cpp
     ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
     ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
@@ -138,8 +132,9 @@ function (compile_benchmark sten_full_path)
   )
   
   target_include_directories(${sten} PUBLIC ${dawn4py_DIR})
-  message("XXXX " ${sten}_inline)
-  message("XXXX " ${sten}_sequential)  
+  target_compile_options(${sten} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-lineinfo>) 
+  # target_compile_options(${sten} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-ptx>)
+  # target_compile_options(${sten} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-src-in-ptx>)
 
   target_include_directories(${sten_bench} PRIVATE ${dawn4py_DIR})
   target_include_directories(${sten_bench} PRIVATE ${CMAKE_CURRENT_LIST_DIR}/utils)
