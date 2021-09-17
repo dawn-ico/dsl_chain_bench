@@ -44,6 +44,7 @@ patch = """
         }
       }
 
+      cudaMalloc((void**) &mesh_.{CHAIN_012_lower}Table, sizeof(int)*{CHAIN_0_Num}*{CHAIN_012_COMPRESSED_SIZE});
       cudaMemcpy(mesh_.{CHAIN_012_lower}Table, {CHAIN_012_lower}TableTransposed_h, sizeof(int)*{CHAIN_0_Num}*{CHAIN_012_COMPRESSED_SIZE}, cudaMemcpyHostToDevice);
 
       gpuErrchk(cudaPeekAtLastError());
@@ -184,13 +185,24 @@ for chain in chains:
       if line.strip().startswith("dawn::unstructured_domain DomainUpper;"):        
         lines.insert(i+1, "    int *" + chain_to_lower(chain[0:2])+ "Table;\n")
         lines.insert(i+1, "    int *" + chain_to_lower(chain[1:3])+ "Table;\n")        
-        break
+        break    
     for i, line in enumerate(lines):
       if line.strip().startswith(chain_to_lower(chain) + "Table = "):
         fstring = """    {}Table = mesh->NeighborTables.at(std::tuple<std::vector<dawn::LocationType>, bool>{{{{{}, {}}}, 0}})"""
+        nested_table_idx = i
         lines.insert(i, fstring.format(chain_to_lower(chain[0:2]), "dawn::LocationType::" + loc_to_elem[chain[0]], "dawn::LocationType::" + loc_to_elem[chain[1]]) + ";\n")
         lines.insert(i, fstring.format(chain_to_lower(chain[1:3]), "dawn::LocationType::" + loc_to_elem[chain[1]], "dawn::LocationType::" + loc_to_elem[chain[2]]) + ";\n")
         break
+
+    # remove old chained table. in brutal ways.
+    chain_line_idx = -1
+    for i, line in enumerate(lines):
+      if line.strip().startswith(chain_to_lower(chain) + "Table = "):
+        chain_line_idx = i
+    lines[chain_line_idx] = "\n"
+    lines[chain_line_idx+1] = "\n"
+    if lines[chain_line_idx+2].strip() is not "}":
+      lines[chain_line_idx+2] = "\n"
 
     # inject weights
     weight_line = -1
@@ -199,7 +211,7 @@ for chain in chains:
         weight_id = line[line.index("weights_"):line.index("weights_")+len("weights_")+2]
         weight_line = i
         break
-    lines[i] = "    ::dawn::float_type " + weight_id +"["+ chain_to_weight_vec_length[tuple(chain)] +"] = "+ chain_to_weight_vec[tuple(chain)] + "\n;"
+    lines[i] = "    ::dawn::float_type " + weight_id +"["+ chain_to_weight_vec_length[tuple(chain)] +"] = "+ chain_to_weight_vec[tuple(chain)] + ";\n"
 
     # set template to compressed size
     templ_size = "<" + chain_to_size(chain) + ">"
@@ -214,6 +226,4 @@ for chain in chains:
   with open(fname_out, "w+") as fout:
     for line in lines:
       print(line, file=fout, end='')
-  copyfile(fname_out, fname_in)
-  break
-
+  copyfile(fname_out, fname_in)  
