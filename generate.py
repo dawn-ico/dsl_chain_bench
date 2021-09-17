@@ -1,7 +1,7 @@
 from enum import Enum
 import itertools
 
-NAME="int_diff"
+NAME="chain"
 
 class Location(Enum):
   Edge = 0

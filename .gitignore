@@ -2,5 +2,6 @@ benchmarks/build
 benchmarks/*.cpp
 benchmarks/*.py
 !benchmarks/build/build_tsa.sh
+!benchmarks/build/inject_patches.py
 benchmarks/CMakeFiles/
 benchmarks/__pycache__/
