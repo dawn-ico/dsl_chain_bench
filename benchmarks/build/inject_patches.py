@@ -19,12 +19,14 @@ patch = """
         nbh_counter.clear();
         for (int nbhIter0 = 0; nbhIter0 < {CHAIN_01_SIZE}; nbhIter0++) {
           int nbhIdx0 = {CHAIN_01_lower}Table_h[elemIdx * {CHAIN_01_SIZE} + nbhIter0];            
+          if (nbhIdx0 == DEVICE_MISSING_VALUE) {
+            continue;
+          }          
           for (int nbhIter1 = 0; nbhIter1 < {CHAIN_12_SIZE}; nbhIter1++) {
             int nbhIdx1 = {CHAIN_12_lower}Table_h[nbhIdx0 * {CHAIN_12_SIZE} + nbhIter1];            
             if (nbhIdx1 >= 0 && nbh_counter.count(nbhIdx1) == 0) {
               nbh_counter[nbhIdx1] = 1;
-            }
-            if (nbhIdx1 >= 0) {
+            } else if (nbhIdx1 >= 0) {
               nbh_counter[nbhIdx1]++;
             }
             lin_idx++;
@@ -162,8 +164,13 @@ for chain in chains:
   fname_out = "red_chain_{}_inline_patched.cpp".format(chain_to_letters(chain))
   print(fname_in)
   with open(fname_in, "r") as fin:
-    lines = fin.readlines()               
-    lines.insert(93, my_patch + "\n")
+    lines = fin.readlines()              
+
+    # put in the patch     
+    for i, line in enumerate(lines):
+      if line.strip().startswith("stream_ = stream;"):        
+        lines.insert(i+1, my_patch)
+        break
 
     # add additional includes
     for i, line in enumerate(lines):
@@ -214,8 +221,7 @@ for chain in chains:
     lines[i] = "    ::dawn::float_type " + weight_id +"["+ chain_to_weight_vec_length[tuple(chain)] +"] = "+ chain_to_weight_vec[tuple(chain)] + ";\n"
 
     # set template to compressed size
-    templ_size = "<" + chain_to_size(chain) + ">"
-    launch_line_idx = -1
+    templ_size = "<" + chain_to_size(chain) + ">"    
     for i, line in enumerate(lines):
       if line.find(templ_size) is not -1:
         launch_line = line.replace(templ_size, "<" + chain_to_compressed_size(chain)  + ">")
