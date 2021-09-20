@@ -18,12 +18,12 @@ patch = """
         int lin_idx = 0;       
         nbh_counter.clear();
         for (int nbhIter0 = 0; nbhIter0 < {CHAIN_01_SIZE}; nbhIter0++) {
-          int nbhIdx0 = {CHAIN_01_lower}Table_h[elemIdx * {CHAIN_01_SIZE} + nbhIter0];            
+          int nbhIdx0 = {CHAIN_01_lower}Table_h[elemIdx + {CHAIN_0_Num} * nbhIter0];            
           if (nbhIdx0 == DEVICE_MISSING_VALUE) {
             continue;
           }          
           for (int nbhIter1 = 0; nbhIter1 < {CHAIN_12_SIZE}; nbhIter1++) {
-            int nbhIdx1 = {CHAIN_12_lower}Table_h[nbhIdx0 * {CHAIN_12_SIZE} + nbhIter1];            
+            int nbhIdx1 = {CHAIN_12_lower}Table_h[nbhIdx0 + {CHAIN_1_Num} * nbhIter1];            
             if (nbhIdx1 >= 0 && nbh_counter.count(nbhIdx1) == 0) {
               nbh_counter[nbhIdx1] = 1;
             } else if (nbhIdx1 >= 0) {
@@ -36,18 +36,12 @@ patch = """
         std::sort(elems.begin(), elems.end(), [](const std::pair<int, int>& left, const std::pair<int, int>& right) {return right.second < left.second;});	
 
         for (int linIdx = 0; linIdx < elems.size(); linIdx++) {
-          {CHAIN_012_lower}Table_h[elemIdx*{CHAIN_012_COMPRESSED_SIZE} + linIdx] = elems[linIdx].first;          
+          {CHAIN_012_lower}Table_h[elemIdx + {CHAIN_0_Num}*linIdx] = elems[linIdx].first;          
         }        
       }
 
-      for(int i = 0; i < {CHAIN_0_Num}; i++) {
-        for(int j = 0; j < {CHAIN_012_COMPRESSED_SIZE}; j++) {
-          {CHAIN_012_lower}TableTransposed_h[j * {CHAIN_0_Num} + i] = {CHAIN_012_lower}Table_h[i * {CHAIN_012_COMPRESSED_SIZE} + j];
-        }
-      }
-
       cudaMalloc((void**) &mesh_.{CHAIN_012_lower}Table, sizeof(int)*{CHAIN_0_Num}*{CHAIN_012_COMPRESSED_SIZE});
-      cudaMemcpy(mesh_.{CHAIN_012_lower}Table, {CHAIN_012_lower}TableTransposed_h, sizeof(int)*{CHAIN_0_Num}*{CHAIN_012_COMPRESSED_SIZE}, cudaMemcpyHostToDevice);
+      cudaMemcpy(mesh_.{CHAIN_012_lower}Table, {CHAIN_012_lower}Table_h, sizeof(int)*{CHAIN_0_Num}*{CHAIN_012_COMPRESSED_SIZE}, cudaMemcpyHostToDevice);
 
       gpuErrchk(cudaPeekAtLastError());
       gpuErrchk(cudaDeviceSynchronize());"""

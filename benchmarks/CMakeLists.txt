@@ -84,6 +84,7 @@ function (add_stencil stencil levels_per_thread block_size inline)
       --output-c-header ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.h
       --block-size ${block_size}
       --levels-per-thread ${levels_per_thread}
+      --atlas-compatible
       ${CMAKE_CURRENT_BINARY_DIR}/${stencil}.iir
   )    
 endfunction()

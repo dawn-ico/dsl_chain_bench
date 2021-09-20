@@ -5,6 +5,6 @@ pushd build
   for bench in $benches 
   do
     echo "srun --partition debug --gres=gpu:1 $bench"
-    srun --partition debug --gres=gpu:1 cuda-memcheck $bench
+    srun --partition debug --gres=gpu:1 $bench
   done 
 popd build
