@@ -31,7 +31,6 @@ int main(int argc, char* argv[]) {
     mesh = AtlasMeshRect(nperdim, nperdim);
   }
    
-  // atlas::Mesh mesh = *meshptr;
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
   const int num_lev = 65;
   const int num_runs = 100000;

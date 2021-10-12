@@ -9,5 +9,5 @@ fac_bdydiff_v = Global("fac_bdydiff_v")
 def mo_nh_diffusion_stencil_09(
     z_nabla2_e: Field[Edge, K], area_edge: Field[Edge], vn: Field[Edge, K]
 ):
-    with domain.across:
+    with domain.upward:
         vn += z_nabla2_e * area_edge * fac_bdydiff_v

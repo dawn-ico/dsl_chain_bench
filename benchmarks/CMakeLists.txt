@@ -56,12 +56,8 @@ endif()
 
 add_subdirectory(utils)
 
-function (add_stencil stencil levels_per_thread block_size inline) 
-  if (inline)    
-    set(dawn_args --default-opt --pass-groups set-loop-order,temporary-inlining)
-  else()    
-    set(dawn_args --default-opt --pass-groups set-loop-order)
-  endif()  
+function (add_stencil stencil levels_per_thread block_size inline)  
+  set(dawn_args --default-opt --pass-groups set-loop-order)  
 
   add_custom_target(${stencil}_sir   
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -108,20 +104,17 @@ function (compile_benchmark sten_full_path)
   get_filename_component(sten_bench ${sten_full_path} NAME_WE) 
   string(REPLACE "_bench" "" sten ${sten_bench})    
   
-  set(sten_inline_full_path ${CMAKE_BINARY_DIR}/${sten}_inline.cpp)
-  set(sten_sequential_full_path ${CMAKE_BINARY_DIR}/${sten}_sequential.cpp) 
+  set(sten_inline_full_path ${CMAKE_BINARY_DIR}/${sten}.cpp)
 
   set_source_files_properties(
-    ${sten_inline_full_path}   
-    ${sten_sequential_full_path}    
+    ${sten_inline_full_path}          
     ${dawn4py_DIR}/driver-includes/to_vtk.cpp
     ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
     ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
     PROPERTIES LANGUAGE CUDA)    
   
   add_library(${sten} STATIC
-    ${sten_inline_full_path}    
-    ${sten_sequential_full_path}
+    ${sten_inline_full_path}        
     ${dawn4py_DIR}/driver-includes/to_vtk.cpp
     ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
     ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
