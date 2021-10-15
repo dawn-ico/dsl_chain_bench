@@ -1,7 +1,7 @@
 from enum import Enum
 import itertools
 
-NAME="int_diff"
+NAME="unroll"
 
 class Location(Enum):
   Edge = 0
@@ -67,6 +67,8 @@ with open('templates/red_{}_bench.cpp'.format(NAME), 'r') as bench_file, open('t
   sten_lines = sten_file.readlines()
   sten_lines = [line.rstrip() for line in sten_lines]
   for chain in chains:
+      if chain[0] is not chain[2]:
+        continue
       with open('benchmarks/red_{}_{}_bench.cpp'.format(NAME, chain_to_letters(chain)), "w+") as bench_out_file:
         for line in bench_lines:
           print(fill_template(line, chain), file=bench_out_file)
