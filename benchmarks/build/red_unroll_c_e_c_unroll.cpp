@@ -181,7 +181,7 @@ public:
           mesh_.DomainLower({::dawn::LocationType::Cells, dawn::UnstructuredSubdomain::Nudging, 0});
       dim3 dG47 = grid(kSize_ + 0 - 0, hsize47, true);
       cec_kernel<<<dG47, dB, 0, stream_>>>(
-          mesh_.CellStride, mesh_.EdgeStride, kSize_, hoffset47, hsize47, mesh_.ecTable,
+          mesh_.CellStride, mesh_.EdgeStride, kSize_, hoffset47, hsize47, mesh_.ceTable,
           mesh_.ccTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, z_temp_);
 #ifndef NDEBUG
 

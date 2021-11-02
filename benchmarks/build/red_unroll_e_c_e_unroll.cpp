@@ -117,24 +117,24 @@ public:
       stream_ = stream;
 
       int *eeTable_h = new int[E_E_SIZE * mesh_.EdgeStride];
-      int *ceTable_h = new int[C_E_SIZE * mesh_.EdgeStride];
-      int *ecTable_h = new int[E_C_SIZE * mesh_.CellStride];
+      int *ceTable_h = new int[C_E_SIZE * mesh_.CellStride];
+      int *ecTable_h = new int[E_C_SIZE * mesh_.EdgeStride];
 
       cudaMemcpy(ceTable_h, mesh_.ceTable,
-                sizeof(int) * C_E_SIZE * mesh_.EdgeStride, cudaMemcpyDeviceToHost);
+                sizeof(int) * C_E_SIZE * mesh_.CellStride, cudaMemcpyDeviceToHost);
       cudaMemcpy(ecTable_h, mesh_.ecTable,
-                sizeof(int) * E_C_SIZE * mesh_.CellStride, cudaMemcpyDeviceToHost);
+                sizeof(int) * E_C_SIZE * mesh_.EdgeStride, cudaMemcpyDeviceToHost);
 
       std::fill(eeTable_h, eeTable_h + mesh_.EdgeStride * E_E_SIZE, -1);
 
       for (int elemIdx = 0; elemIdx < mesh_.EdgeStride; elemIdx++) {
         int lin_idx = 0;
-        for (int nbhIter0 = 0; nbhIter0 < C_E_SIZE; nbhIter0++) {
+        for (int nbhIter0 = 0; nbhIter0 < E_C_SIZE; nbhIter0++) {
           int nbhIdx0 = ecTable_h[elemIdx + mesh_.EdgeStride * nbhIter0];
           if (nbhIdx0 == DEVICE_MISSING_VALUE) {
             continue;
           }
-          for (int nbhIter1 = 0; nbhIter1 < E_C_SIZE; nbhIter1++) {
+          for (int nbhIter1 = 0; nbhIter1 < C_E_SIZE; nbhIter1++) {
             int nbhIdx1 = ceTable_h[nbhIdx0 + mesh_.CellStride * nbhIter1];
             if (nbhIdx1 == DEVICE_MISSING_VALUE) {
               continue;

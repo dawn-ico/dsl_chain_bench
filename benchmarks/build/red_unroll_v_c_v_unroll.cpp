@@ -137,13 +137,13 @@ public:
   stream_ = stream;
 
   int *vvTable_h = new int[V_V_SIZE * mesh_.VertexStride];
-  int *vcTable_h = new int[V_C_SIZE * mesh_.CellStride];
-  int *cvTable_h = new int[C_V_SIZE * mesh_.VertexStride];
+  int *vcTable_h = new int[V_C_SIZE * mesh_.VertexStride];
+  int *cvTable_h = new int[C_V_SIZE * mesh_.CellStride];
 
   cudaMemcpy(vcTable_h, mesh_.vcTable,
-             sizeof(int) * V_C_SIZE * mesh_.CellStride, cudaMemcpyDeviceToHost);
+             sizeof(int) * V_C_SIZE * mesh_.VertexStride, cudaMemcpyDeviceToHost);
   cudaMemcpy(cvTable_h, mesh_.cvTable,
-             sizeof(int) * C_V_SIZE * mesh_.VertexStride,
+             sizeof(int) * C_V_SIZE * mesh_.CellStride,
              cudaMemcpyDeviceToHost);
 
   std::fill(vvTable_h, vvTable_h + mesh_.VertexStride * V_V_SIZE, -1);
