@@ -99,7 +99,7 @@ foreach (sten ${stencils})
   if (${sten} MATCHES ".*inline")   
     add_stencil(${sten} 1 128 TRUE)
   else()   
-    add_stencil(${sten} 1 128 FALSE)
+    add_stencil(${sten} 1 128 TRUE)
   endif()
 endforeach()
 
@@ -108,11 +108,11 @@ function (compile_benchmark sten_full_path)
   string(REPLACE "_bench" "" sten ${sten_bench})    
   
   set(sten_inline_full_path ${CMAKE_BINARY_DIR}/${sten}_inline.cpp)
-  set(sten_sequential_full_path ${CMAKE_BINARY_DIR}/${sten}_sequential.cpp) 
+  set(sten_unroll_full_path ${CMAKE_BINARY_DIR}/${sten}_unroll.cpp) 
 
   set_source_files_properties(
     ${sten_inline_full_path}   
-    ${sten_sequential_full_path}    
+    ${sten_unroll_full_path}    
     ${dawn4py_DIR}/driver-includes/to_vtk.cpp
     ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
     ${dawn4py_DIR}/driver-includes/cuda_verify.cpp
@@ -120,7 +120,7 @@ function (compile_benchmark sten_full_path)
   
   add_library(${sten} STATIC
     ${sten_inline_full_path}    
-    ${sten_sequential_full_path}
+    ${sten_unroll_full_path}
     ${dawn4py_DIR}/driver-includes/to_vtk.cpp
     ${dawn4py_DIR}/driver-includes/cuda_utils.cpp
     ${dawn4py_DIR}/driver-includes/cuda_verify.cpp

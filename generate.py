@@ -21,8 +21,6 @@ chains = [[Location.Edge, Location.Cell, Location.Vertex],
           [Location.Cell, Location.Vertex, Location.Edge],
           [Location.Cell, Location.Vertex, Location.Cell]]
 
-versions = ["inline", "sequential"]
-
 loc_to_char = {Location.Edge: "e", Location.Cell: "c", Location.Vertex: "v"}
 loc_to_atlas = {Location.Edge: "edges()", Location.Cell: "cells()", Location.Vertex: "nodes()"}
 
@@ -73,9 +71,9 @@ with open('templates/red_{}_bench.cpp'.format(NAME), 'r') as bench_file, open('t
         for line in bench_lines:
           print(fill_template(line, chain), file=bench_out_file)
         with open('benchmarks/red_{}_{}_inline.py'.format(NAME, chain_to_letters(chain)), "w+") as sten_out_inl_file, \
-              open('benchmarks/red_{}_{}_sequential.py'.format(NAME, chain_to_letters(chain)), "w+") as sten_out_seq_file:
+              open('benchmarks/red_{}_{}_unroll.py'.format(NAME, chain_to_letters(chain)), "w+") as sten_out_seq_file:
           for line in sten_lines:
             print(fill_template(line, chain, "inline"), file=sten_out_inl_file)
           for line in sten_lines:
-            print(fill_template(line, chain, "sequential"), file=sten_out_seq_file)
+            print(fill_template(line, chain, "unroll"), file=sten_out_seq_file)
         
