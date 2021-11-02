@@ -94,9 +94,9 @@ endforeach()
 
 foreach (sten ${stencils})
   if (${sten} MATCHES ".*inline")   
-    add_stencil(${sten} 1 128 TRUE)
+    add_stencil(${sten} 65 128 TRUE)
   else()   
-    add_stencil(${sten} 1 128 FALSE)
+    add_stencil(${sten} 65 128 FALSE)
   endif()
 endforeach()
 

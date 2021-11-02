@@ -8,6 +8,8 @@
 
 #include "nh_diffusion_stencil_01.h"
 
+#include <atlas/util/CoordinateEnums.h>
+
 template<typename... Args>
 double run_and_time(void (*fun) (Args... args), Args... args) {
   cudaEvent_t start, stop;
@@ -30,10 +32,19 @@ int main(int argc, char* argv[]) {
     int nperdim = sqrt(atoi(argv[1]));
     mesh = AtlasMeshRect(nperdim, nperdim);
   }
+
+  FILE *fp = fopen("debug.txt", "w+");
+  auto xy = atlas::array::make_view<double, 2>(mesh.nodes().xy());
+  for(int nodeIdx = 0; nodeIdx < mesh.nodes().size(); nodeIdx++) {
+    double x = xy(nodeIdx, atlas::LON);
+    double y = xy(nodeIdx, atlas::LAT);
+    fprintf(fp, "%f %f\n", x, y);
+  }
+  fclose(fp);
    
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
   const int num_lev = 65;
-  const int num_runs = 100000;
+  const int num_runs = 1e4;
 
   const size_t num_edges = gpu_tri_mesh.NumEdges;
   const size_t num_cells = gpu_tri_mesh.NumCells;

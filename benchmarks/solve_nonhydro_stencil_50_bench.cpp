@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
    
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
   const int num_lev = 65;
-  const int num_runs = 100000;
+  const int num_runs = 1e4;
 
   const size_t num_edges = gpu_tri_mesh.NumEdges;
   const size_t num_cells = gpu_tri_mesh.NumCells;
