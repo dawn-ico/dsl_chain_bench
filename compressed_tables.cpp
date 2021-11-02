@@ -5,12 +5,7 @@ static void setup_cec(const dawn::GlobalGpuTriMesh *mesh, int kSize,
   kSize_ = kSize;
   is_setup_ = true;
   stream_ = stream;
-  kh_smag_e_kSize_ = kh_smag_e_kSize;
-  theta_v_kSize_ = theta_v_kSize;
-  exner_kSize_ = exner_kSize;
-  ::dawn::allocField(&enh_diffu_3d_, mesh_.CellStride, kSize_);
-  ::dawn::allocField(&z_temp_, mesh_.CellStride, kSize_);
-
+ 
   int *ccTable_h = new int[C_C_SIZE * mesh_.CellStride];
   int *ecTable_h = new int[E_C_SIZE * mesh_.EdgeStride];
   int *ceTable_h = new int[C_E_SIZE * mesh_.CellStride];
@@ -51,11 +46,6 @@ static void setup_vev(const dawn::GlobalGpuTriMesh *mesh, int kSize,
   kSize_ = kSize;
   is_setup_ = true;
   stream_ = stream;
-  kh_smag_e_kSize_ = kh_smag_e_kSize;
-  theta_v_kSize_ = theta_v_kSize;
-  exner_kSize_ = exner_kSize;
-  ::dawn::allocField(&enh_diffu_3d_, mesh_.VertexStride, kSize_);
-  ::dawn::allocField(&z_temp_, mesh_.VertexStride, kSize_);
 
   int *vvTable_h = new int[V_V_SIZE * mesh_.VertexStride];
   int *evTable_h = new int[E_V_SIZE * mesh_.EdgeStride];
@@ -204,12 +194,7 @@ static void setup_cvc(const dawn::GlobalGpuTriMesh *mesh, int kSize,
   kSize_ = kSize;
   is_setup_ = true;
   stream_ = stream;
-  kh_smag_e_kSize_ = kh_smag_e_kSize;
-  theta_v_kSize_ = theta_v_kSize;
-  exner_kSize_ = exner_kSize;
-  ::dawn::allocField(&enh_diffu_3d_, mesh_.CellStride, kSize_);
-  ::dawn::allocField(&z_temp_, mesh_.CellStride, kSize_);
-
+ 
   int *ccTable_h = new int[C_C_SIZE * mesh_.CellStride];
   int *cvTable_h = new int[C_V_SIZE * mesh_.CellStride];
   int *vcTable_h = new int[V_C_SIZE * mesh_.VertexStride];
@@ -299,11 +284,6 @@ static void setup_vcv(const dawn::GlobalGpuTriMesh *mesh, int kSize,
   kSize_ = kSize;
   is_setup_ = true;
   stream_ = stream;
-  kh_smag_e_kSize_ = kh_smag_e_kSize;
-  theta_v_kSize_ = theta_v_kSize;
-  exner_kSize_ = exner_kSize;
-  ::dawn::allocField(&enh_diffu_3d_, mesh_.VertexStride, kSize_);
-  ::dawn::allocField(&z_temp_, mesh_.VertexStride, kSize_);
 
   int *ccTable_h = new int[V_V_SIZE * mesh_.VertexStride];
   int *vcTable_h = new int[V_C_SIZE * mesh_.CellStride];

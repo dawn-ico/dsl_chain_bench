@@ -18,7 +18,7 @@ __global__ void unroll_e_v_e_unroll_stencil37_ms46_s47_kernel(
     int EdgeStride, int VertexStride, int kSize, int hOffset, int hSize, const int* veTable,
     const int* evTable, const ::dawn::float_type* __restrict__ kh_smag_e,
     const ::dawn::float_type* __restrict__ inv_dual_edge_length,
-    const ::dawn::float_type* __restrict__ theta_v, ::dawn::float_type* __restrict__ outF) {
+    const ::dawn::float_type* __restrict__ theta_v, ::dawn::float_type* __restrict__ z_temp) {
   unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int kidx = blockIdx.y * blockDim.y + threadIdx.y;
   int klo = kidx * LEVELS_PER_THREAD + 0;
@@ -45,7 +45,7 @@ __global__ void unroll_e_v_e_unroll_stencil37_ms46_s47_kernel(
       lhs_62 += ((kh_smag_e[(kIter + 0) * VertexStride + nbhIdx0] * inv_dual_edge_length[nbhIdx0]) *
                  lhs_57);
     }
-    outF[(kIter + 0) * EdgeStride + pidx] = lhs_62;
+    z_temp[(kIter + 0) * EdgeStride + pidx] = lhs_62;
   }
 }
 
@@ -89,7 +89,7 @@ public:
     ::dawn::float_type* kh_smag_e_;
     ::dawn::float_type* inv_dual_edge_length_;
     ::dawn::float_type* theta_v_;
-    ::dawn::float_type* outF_;
+    ::dawn::float_type* z_temp_;
     static int kSize_;
     static GpuTriMesh mesh_;
     static bool is_setup_;
@@ -140,7 +140,7 @@ public:
       dim3 dG47 = grid(kSize_ + 0 - 0, hsize47, true);
       unroll_e_v_e_unroll_stencil37_ms46_s47_kernel<V_E_SIZE, E_V_SIZE><<<dG47, dB, 0, stream_>>>(
           mesh_.EdgeStride, mesh_.VertexStride, kSize_, hoffset47, hsize47, mesh_.veTable,
-          mesh_.evTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, outF_);
+          mesh_.evTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, z_temp_);
 #ifndef NDEBUG
 
       gpuErrchk(cudaPeekAtLastError());
@@ -148,35 +148,36 @@ public:
 #endif
     }
 
-    void CopyResultToHost(::dawn::float_type* outF, bool do_reshape) {
+    void CopyResultToHost(::dawn::float_type* z_temp, bool do_reshape) {
       if(do_reshape) {
         ::dawn::float_type* host_buf = new ::dawn::float_type[(mesh_.EdgeStride) * kSize_];
-        gpuErrchk(cudaMemcpy((::dawn::float_type*)host_buf, outF_,
+        gpuErrchk(cudaMemcpy((::dawn::float_type*)host_buf, z_temp_,
                              (mesh_.EdgeStride) * kSize_ * sizeof(::dawn::float_type),
                              cudaMemcpyDeviceToHost));
-        dawn::reshape_back(host_buf, outF, kSize_, mesh_.EdgeStride);
+        dawn::reshape_back(host_buf, z_temp, kSize_, mesh_.EdgeStride);
         delete[] host_buf;
       } else {
-        gpuErrchk(cudaMemcpy(outF, outF_, (mesh_.EdgeStride) * kSize_ * sizeof(::dawn::float_type),
+        gpuErrchk(cudaMemcpy(z_temp, z_temp_,
+                             (mesh_.EdgeStride) * kSize_ * sizeof(::dawn::float_type),
                              cudaMemcpyDeviceToHost));
       }
     }
 
     void copy_memory(::dawn::float_type* kh_smag_e, ::dawn::float_type* inv_dual_edge_length,
-                     ::dawn::float_type* theta_v, ::dawn::float_type* outF, bool do_reshape) {
+                     ::dawn::float_type* theta_v, ::dawn::float_type* z_temp, bool do_reshape) {
       dawn::initField(kh_smag_e, &kh_smag_e_, mesh_.VertexStride, kSize_, do_reshape);
       dawn::initField(inv_dual_edge_length, &inv_dual_edge_length_, mesh_.VertexStride, 1,
                       do_reshape);
       dawn::initField(theta_v, &theta_v_, mesh_.EdgeStride, kSize_, do_reshape);
-      dawn::initField(outF, &outF_, mesh_.EdgeStride, kSize_, do_reshape);
+      dawn::initField(z_temp, &z_temp_, mesh_.EdgeStride, kSize_, do_reshape);
     }
 
     void copy_pointers(::dawn::float_type* kh_smag_e, ::dawn::float_type* inv_dual_edge_length,
-                       ::dawn::float_type* theta_v, ::dawn::float_type* outF) {
+                       ::dawn::float_type* theta_v, ::dawn::float_type* z_temp) {
       kh_smag_e_ = kh_smag_e;
       inv_dual_edge_length_ = inv_dual_edge_length;
       theta_v_ = theta_v;
-      outF_ = outF;
+      z_temp_ = z_temp;
     }
   };
 };
@@ -186,52 +187,53 @@ extern "C" {
 void run_unroll_e_v_e_unroll_from_c_host(dawn::GlobalGpuTriMesh* mesh, int k_size,
                                          ::dawn::float_type* kh_smag_e,
                                          ::dawn::float_type* inv_dual_edge_length,
-                                         ::dawn::float_type* theta_v, ::dawn::float_type* outF) {
+                                         ::dawn::float_type* theta_v, ::dawn::float_type* z_temp) {
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37 s;
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37::setup(mesh, k_size, 0);
-  s.copy_memory(kh_smag_e, inv_dual_edge_length, theta_v, outF, true);
+  s.copy_memory(kh_smag_e, inv_dual_edge_length, theta_v, z_temp, true);
   s.run();
-  s.CopyResultToHost(outF, true);
+  s.CopyResultToHost(z_temp, true);
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37::free();
   return;
 }
 void run_unroll_e_v_e_unroll_from_fort_host(dawn::GlobalGpuTriMesh* mesh, int k_size,
                                             ::dawn::float_type* kh_smag_e,
                                             ::dawn::float_type* inv_dual_edge_length,
-                                            ::dawn::float_type* theta_v, ::dawn::float_type* outF) {
+                                            ::dawn::float_type* theta_v,
+                                            ::dawn::float_type* z_temp) {
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37 s;
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37::setup(mesh, k_size, 0);
-  s.copy_memory(kh_smag_e, inv_dual_edge_length, theta_v, outF, false);
+  s.copy_memory(kh_smag_e, inv_dual_edge_length, theta_v, z_temp, false);
   s.run();
-  s.CopyResultToHost(outF, false);
+  s.CopyResultToHost(z_temp, false);
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37::free();
   return;
 }
 void run_unroll_e_v_e_unroll(::dawn::float_type* kh_smag_e,
                              ::dawn::float_type* inv_dual_edge_length, ::dawn::float_type* theta_v,
-                             ::dawn::float_type* outF) {
+                             ::dawn::float_type* z_temp) {
   dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37 s;
-  s.copy_pointers(kh_smag_e, inv_dual_edge_length, theta_v, outF);
+  s.copy_pointers(kh_smag_e, inv_dual_edge_length, theta_v, z_temp);
   s.run();
   return;
 }
-bool verify_unroll_e_v_e_unroll(const ::dawn::float_type* outF_dsl, const ::dawn::float_type* outF,
-                                const double outF_rel_tol, const double outF_abs_tol,
-                                const int iteration) {
+bool verify_unroll_e_v_e_unroll(const ::dawn::float_type* z_temp_dsl,
+                                const ::dawn::float_type* z_temp, const double z_temp_rel_tol,
+                                const double z_temp_abs_tol, const int iteration) {
   using namespace std::chrono;
   const auto& mesh = dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37::getMesh();
   int kSize = dawn_generated::cuda_ico::unroll_e_v_e_unroll::stencil_37::getKSize();
   high_resolution_clock::time_point t_start = high_resolution_clock::now();
   bool isValid;
-  isValid = ::dawn::verify_field((mesh.EdgeStride) * kSize, outF_dsl, outF, "outF", outF_rel_tol,
-                                 outF_abs_tol);
+  isValid = ::dawn::verify_field((mesh.EdgeStride) * kSize, z_temp_dsl, z_temp, "z_temp",
+                                 z_temp_rel_tol, z_temp_abs_tol);
   if(!isValid) {
 #ifdef __SERIALIZE_ON_ERROR
-    serialize_dense_edges(0, (mesh.NumEdges - 1), kSize, (mesh.EdgeStride), outF,
-                          "unroll_e_v_e_unroll", "outF", iteration);
-    serialize_dense_edges(0, (mesh.NumEdges - 1), kSize, (mesh.EdgeStride), outF_dsl,
-                          "unroll_e_v_e_unroll", "outF_dsl", iteration);
-    std::cout << "[DSL] serializing outF as error is high.\n" << std::flush;
+    serialize_dense_edges(0, (mesh.NumEdges - 1), kSize, (mesh.EdgeStride), z_temp,
+                          "unroll_e_v_e_unroll", "z_temp", iteration);
+    serialize_dense_edges(0, (mesh.NumEdges - 1), kSize, (mesh.EdgeStride), z_temp_dsl,
+                          "unroll_e_v_e_unroll", "z_temp_dsl", iteration);
+    std::cout << "[DSL] serializing z_temp as error is high.\n" << std::flush;
 #endif
   }
 #ifdef __SERIALIZE_ON_ERROR
@@ -245,16 +247,16 @@ bool verify_unroll_e_v_e_unroll(const ::dawn::float_type* outF_dsl, const ::dawn
 }
 void run_and_verify_unroll_e_v_e_unroll(::dawn::float_type* kh_smag_e,
                                         ::dawn::float_type* inv_dual_edge_length,
-                                        ::dawn::float_type* theta_v, ::dawn::float_type* outF,
-                                        ::dawn::float_type* outF_before, const double outF_rel_tol,
-                                        const double outF_abs_tol) {
+                                        ::dawn::float_type* theta_v, ::dawn::float_type* z_temp,
+                                        ::dawn::float_type* z_temp_before,
+                                        const double z_temp_rel_tol, const double z_temp_abs_tol) {
   static int iteration = 0;
   std::cout << "[DSL] Running stencil unroll_e_v_e_unroll (" << iteration << ") ...\n"
             << std::flush;
-  run_unroll_e_v_e_unroll(kh_smag_e, inv_dual_edge_length, theta_v, outF_before);
+  run_unroll_e_v_e_unroll(kh_smag_e, inv_dual_edge_length, theta_v, z_temp_before);
   std::cout << "[DSL] unroll_e_v_e_unroll run time: " << time << "s\n" << std::flush;
   std::cout << "[DSL] Verifying stencil unroll_e_v_e_unroll...\n" << std::flush;
-  verify_unroll_e_v_e_unroll(outF_before, outF, outF_rel_tol, outF_abs_tol, iteration);
+  verify_unroll_e_v_e_unroll(z_temp_before, z_temp, z_temp_rel_tol, z_temp_abs_tol, iteration);
   iteration++;
 }
 void setup_unroll_e_v_e_unroll(dawn::GlobalGpuTriMesh* mesh, int k_size, cudaStream_t stream) {
