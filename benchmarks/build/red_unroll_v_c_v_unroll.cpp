@@ -7,45 +7,71 @@
 #define GRIDTOOLS_DAWN_NO_INCLUDE
 #include "driver-includes/math.hpp"
 #include <chrono>
+#include <set>
+#include <assert.h>
 #define BLOCK_SIZE 128
 #define LEVELS_PER_THREAD 1
 using namespace gridtools::dawn;
 
 namespace dawn_generated {
 namespace cuda_ico {
-template <int C_V_SIZE, int V_C_SIZE>
-__global__ void unroll_v_c_v_unroll_stencil37_ms46_s47_kernel(
-    int VertexStride, int CellStride, int kSize, int hOffset, int hSize, const int* cvTable,
-    const int* vcTable, const ::dawn::float_type* __restrict__ kh_smag_e,
-    const ::dawn::float_type* __restrict__ inv_dual_edge_length,
-    const ::dawn::float_type* __restrict__ theta_v, ::dawn::float_type* __restrict__ z_temp) {
+__global__ void
+vcv_kernel(int VertexStride, int CellStride, int kSize, int hOffset, int hSize,
+           const int *vcTable, const int *vvTable,
+           const ::dawn::float_type *__restrict__ inv_dual_edge_length,
+           const ::dawn::float_type *__restrict__ kh_smag_e,
+           const ::dawn::float_type *__restrict__ theta_v,
+           ::dawn::float_type *__restrict__ z_temp) {
   unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int kidx = blockIdx.y * blockDim.y + threadIdx.y;
-  int klo = kidx * LEVELS_PER_THREAD + 0;
-  int khi = (kidx + 1) * LEVELS_PER_THREAD + 0;
-  if(pidx >= hSize) {
+  int klo = kidx * LEVELS_PER_THREAD;
+  int khi = (kidx + 1) * LEVELS_PER_THREAD;
+  if (pidx >= hSize) {
     return;
   }
   pidx += hOffset;
-  for(int kIter = klo; kIter < khi; kIter++) {
-    if(kIter >= kSize + 0) {
+  for (int kIter = klo; kIter < khi; kIter++) {
+    if (kIter >= kSize) {
       return;
     }
-    ::dawn::float_type lhs_62 = (::dawn::float_type)0;
-    for(int nbhIter0 = 0; nbhIter0 < V_C_SIZE; nbhIter0++) {
-      int nbhIdx0 = vcTable[pidx + VertexStride * nbhIter0];
-      if(nbhIdx0 == DEVICE_MISSING_VALUE) {
-        continue;
-      }
-      ::dawn::float_type lhs_57 = (::dawn::float_type)0;
-      for(int nbhIter1 = 0; nbhIter1 < C_V_SIZE; nbhIter1++) {
-        int nbhIdx1 = cvTable[nbhIdx0 + CellStride * nbhIter1];
-        lhs_57 += theta_v[(kIter + 0) * VertexStride + nbhIdx1];
-      }
-      lhs_62 += ((kh_smag_e[(kIter + 0) * CellStride + nbhIdx0] * inv_dual_edge_length[nbhIdx0]) *
-                 lhs_57);
-    }
-    z_temp[(kIter + 0) * VertexStride + pidx] = lhs_62;
+
+    const int nbhIdx0_0 = vcTable[pidx + VertexStride * 0];
+    const int nbhIdx0_1 = vcTable[pidx + VertexStride * 1];
+    const int nbhIdx0_2 = vcTable[pidx + VertexStride * 2];
+    const int nbhIdx0_3 = vcTable[pidx + VertexStride * 3];
+    const int nbhIdx0_4 = vcTable[pidx + VertexStride * 4];
+    const int nbhIdx0_5 = vcTable[pidx + VertexStride * 5];
+
+    const int nbhIdx1_0 = vvTable[pidx + VertexStride * 0];
+    const int nbhIdx1_1 = vvTable[pidx + VertexStride * 1];
+    const int nbhIdx1_2 = vvTable[pidx + VertexStride * 2];
+    const int nbhIdx1_3 = vvTable[pidx + VertexStride * 3];
+    const int nbhIdx1_4 = vvTable[pidx + VertexStride * 4];
+    const int nbhIdx1_5 = vvTable[pidx + VertexStride * 5];
+
+    int self_idx = kIter * VertexStride + pidx;
+
+    ::dawn::float_type lhs_566 =
+        ((kh_smag_e[kIter * CellStride + nbhIdx0_0] *
+          inv_dual_edge_length[nbhIdx0_0]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_0] + theta_v[nbhIdx1_1])) +
+        ((kh_smag_e[kIter * CellStride + nbhIdx0_1] *
+          inv_dual_edge_length[nbhIdx0_1]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_1] + theta_v[nbhIdx1_2])) +
+        ((kh_smag_e[kIter * CellStride + nbhIdx0_2] *
+          inv_dual_edge_length[nbhIdx0_2]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_2] + theta_v[nbhIdx1_3])) +
+        ((kh_smag_e[kIter * CellStride + nbhIdx0_3] *
+          inv_dual_edge_length[nbhIdx0_3]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_3] + theta_v[nbhIdx1_4])) +
+        ((kh_smag_e[kIter * CellStride + nbhIdx0_4] *
+          inv_dual_edge_length[nbhIdx0_4]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_4] + theta_v[nbhIdx1_5])) +
+        ((kh_smag_e[kIter * CellStride + nbhIdx0_5] *
+          inv_dual_edge_length[nbhIdx0_5]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_5] + theta_v[nbhIdx1_0]));
+
+    z_temp[self_idx] = lhs_566;
   }
 }
 
@@ -53,6 +79,7 @@ class unroll_v_c_v_unroll {
 public:
   static const int V_C_SIZE = 6;
   static const int C_V_SIZE = 3;
+  static const int V_V_SIZE = 6;
 
   struct GpuTriMesh {
     int NumVertices;
@@ -65,6 +92,7 @@ public:
     dawn::unstructured_domain DomainUpper;
     int* vcTable;
     int* cvTable;
+    int* vvTable;
 
     GpuTriMesh() {}
 
@@ -103,11 +131,92 @@ public:
     static void free() {}
 
     static void setup(const dawn::GlobalGpuTriMesh* mesh, int kSize, cudaStream_t stream) {
-      mesh_ = GpuTriMesh(mesh);
-      kSize_ = kSize;
-      is_setup_ = true;
-      stream_ = stream;
+  mesh_ = GpuTriMesh(mesh);
+  kSize_ = kSize;
+  is_setup_ = true;
+  stream_ = stream;
+
+  int *vvTable_h = new int[V_V_SIZE * mesh_.VertexStride];
+  int *vcTable_h = new int[V_C_SIZE * mesh_.CellStride];
+  int *cvTable_h = new int[C_V_SIZE * mesh_.VertexStride];
+
+  cudaMemcpy(vcTable_h, mesh_.vcTable,
+             sizeof(int) * V_C_SIZE * mesh_.CellStride, cudaMemcpyDeviceToHost);
+  cudaMemcpy(cvTable_h, mesh_.cvTable,
+             sizeof(int) * C_V_SIZE * mesh_.VertexStride,
+             cudaMemcpyDeviceToHost);
+
+  std::fill(vvTable_h, vvTable_h + mesh_.VertexStride * V_V_SIZE, -1);
+
+  for (int elemIdx = 0; elemIdx < mesh_.VertexStride; elemIdx++) {    
+    std::vector<std::set<int>> nbhs;
+    for (int nbhIter0 = 0; nbhIter0 < V_C_SIZE; nbhIter0++) {
+      std::set<int> nbh;
+      int nbhIdx0 = vcTable_h[elemIdx + mesh_.VertexStride * nbhIter0];
+      for (int nbhIter1 = 0; nbhIter1 < C_V_SIZE; nbhIter1++) {
+        int nbhIdx1 = cvTable_h[nbhIdx0 + mesh_.CellStride * nbhIter1];
+        if (nbhIdx1 != nbhIdx0) {
+          nbh.insert(nbhIdx1);
+        }
+      }
+      nbhs.push_back(nbh);
     }
+
+    std::vector<int> tour;
+
+    int behind = nbhs.size() - 1;
+    int cur = 0;
+    int ahead = 1;
+    while (true) {
+      std::set<int> intersect_right;
+      set_intersection(nbhs[cur].begin(), nbhs[cur].end(), nbhs[ahead].begin(),
+                       nbhs[ahead].end(),
+                       std::inserter(intersect_right, intersect_right.begin()));
+
+      std::set<int> intersect_left;
+      set_intersection(nbhs[cur].begin(), nbhs[cur].end(), nbhs[behind].begin(),
+                       nbhs[behind].end(),
+                       std::inserter(intersect_left, intersect_left.begin()));
+
+      assert(intersect_right.size() == 1);
+      assert(intersect_left.size() == 1);
+
+      int anchor_left = *intersect_left.begin();
+      int anchor_right = *intersect_right.begin();
+      for (auto it = nbhs[cur].begin(); it != nbhs[cur].end(); ++it) {
+        if (*it != anchor_left && *it != anchor_right) {
+          tour.push_back(*it);
+        }
+      }
+      tour.push_back(anchor_right);
+
+      if (ahead == 0) {
+        break;
+      }
+
+      behind++;
+      if (behind == nbhs.size()) {
+        behind = 0;
+      }
+      cur++;
+      ahead++;
+      if (cur == nbhs.size() - 1) {
+        ahead = 0;
+      }
+    }
+
+    assert(tour.size() == V_V_SIZE);
+    for (int lin_idx = 0; lin_idx < V_V_SIZE; lin_idx++) {
+      vvTable_h[elemIdx + mesh_.VertexStride * lin_idx] = tour[lin_idx];
+    }
+   }
+
+  cudaMalloc((void **)&mesh_.vvTable,
+          sizeof(int) * mesh_.VertexStride * V_V_SIZE);
+  cudaMemcpy(mesh_.vvTable, vvTable_h,
+             sizeof(int) * mesh_.VertexStride * V_V_SIZE,
+             cudaMemcpyHostToDevice);
+}
 
     dim3 grid(int kSize, int elSize, bool kparallel) {
       if(kparallel) {
@@ -138,9 +247,9 @@ public:
       int hoffset47 = mesh_.DomainLower(
           {::dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Nudging, 0});
       dim3 dG47 = grid(kSize_ + 0 - 0, hsize47, true);
-      unroll_v_c_v_unroll_stencil37_ms46_s47_kernel<C_V_SIZE, V_C_SIZE><<<dG47, dB, 0, stream_>>>(
-          mesh_.VertexStride, mesh_.CellStride, kSize_, hoffset47, hsize47, mesh_.cvTable,
-          mesh_.vcTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, z_temp_);
+      vcv_kernel<<<dG47, dB, 0, stream_>>>(
+          mesh_.VertexStride, mesh_.CellStride, kSize_, hoffset47, hsize47, mesh_.vcTable,
+          mesh_.vvTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, z_temp_);
 #ifndef NDEBUG
 
       gpuErrchk(cudaPeekAtLastError());

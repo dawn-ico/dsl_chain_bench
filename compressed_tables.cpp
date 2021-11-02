@@ -93,11 +93,6 @@ static void setup_eve(const dawn::GlobalGpuTriMesh *mesh, int kSize,
   kSize_ = kSize;
   is_setup_ = true;
   stream_ = stream;
-  kh_smag_e_kSize_ = kh_smag_e_kSize;
-  theta_v_kSize_ = theta_v_kSize;
-  exner_kSize_ = exner_kSize;
-  ::dawn::allocField(&enh_diffu_3d_, mesh_.EdgeStride, kSize_);
-  ::dawn::allocField(&z_temp_, mesh_.EdgeStride, kSize_);
 
   int *eeTable_h = new int[E_E_SIZE * mesh_.EdgeStride];
   int *veTable_h = new int[V_E_SIZE * mesh_.EdgeStride];
@@ -144,11 +139,6 @@ static void setup_ece(const dawn::GlobalGpuTriMesh *mesh, int kSize,
   kSize_ = kSize;
   is_setup_ = true;
   stream_ = stream;
-  kh_smag_e_kSize_ = kh_smag_e_kSize;
-  theta_v_kSize_ = theta_v_kSize;
-  exner_kSize_ = exner_kSize;
-  ::dawn::allocField(&enh_diffu_3d_, mesh_.EdgeStride, kSize_);
-  ::dawn::allocField(&z_temp_, mesh_.EdgeStride, kSize_);
 
   int *eeTable_h = new int[E_E_SIZE * mesh_.EdgeStride];
   int *ceTable_h = new int[C_E_SIZE * mesh_.EdgeStride];

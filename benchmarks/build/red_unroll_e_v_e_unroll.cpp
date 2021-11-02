@@ -13,39 +13,53 @@ using namespace gridtools::dawn;
 
 namespace dawn_generated {
 namespace cuda_ico {
-template <int V_E_SIZE, int E_V_SIZE>
-__global__ void unroll_e_v_e_unroll_stencil37_ms46_s47_kernel(
-    int EdgeStride, int VertexStride, int kSize, int hOffset, int hSize, const int* veTable,
-    const int* evTable, const ::dawn::float_type* __restrict__ kh_smag_e,
-    const ::dawn::float_type* __restrict__ inv_dual_edge_length,
-    const ::dawn::float_type* __restrict__ theta_v, ::dawn::float_type* __restrict__ z_temp) {
+__global__ void
+eve_kernel(int EdgeStride, int VertexStride, int kSize, int hOffset, int hSize,
+           const int *evTable, const int *eeTable,
+           const ::dawn::float_type *__restrict__ inv_dual_edge_length,
+           const ::dawn::float_type *__restrict__ kh_smag_e,
+           const ::dawn::float_type *__restrict__ theta_v,
+           ::dawn::float_type *__restrict__ z_temp) {
   unsigned int pidx = blockIdx.x * blockDim.x + threadIdx.x;
   unsigned int kidx = blockIdx.y * blockDim.y + threadIdx.y;
-  int klo = kidx * LEVELS_PER_THREAD + 0;
-  int khi = (kidx + 1) * LEVELS_PER_THREAD + 0;
-  if(pidx >= hSize) {
+  int klo = kidx * LEVELS_PER_THREAD;
+  int khi = (kidx + 1) * LEVELS_PER_THREAD;
+  if (pidx >= hSize) {
     return;
   }
   pidx += hOffset;
-  for(int kIter = klo; kIter < khi; kIter++) {
-    if(kIter >= kSize + 0) {
+  for (int kIter = klo; kIter < khi; kIter++) {
+    if (kIter >= kSize) {
       return;
     }
-    ::dawn::float_type lhs_62 = (::dawn::float_type)0;
-    for(int nbhIter0 = 0; nbhIter0 < E_V_SIZE; nbhIter0++) {
-      int nbhIdx0 = evTable[pidx + EdgeStride * nbhIter0];
-      ::dawn::float_type lhs_57 = (::dawn::float_type)0;
-      for(int nbhIter1 = 0; nbhIter1 < V_E_SIZE; nbhIter1++) {
-        int nbhIdx1 = veTable[nbhIdx0 + VertexStride * nbhIter1];
-        if(nbhIdx1 == DEVICE_MISSING_VALUE) {
-          continue;
-        }
-        lhs_57 += theta_v[(kIter + 0) * EdgeStride + nbhIdx1];
-      }
-      lhs_62 += ((kh_smag_e[(kIter + 0) * VertexStride + nbhIdx0] * inv_dual_edge_length[nbhIdx0]) *
-                 lhs_57);
-    }
-    z_temp[(kIter + 0) * EdgeStride + pidx] = lhs_62;
+
+    const int nbhIdx0_0 = evTable[pidx + EdgeStride * 0];
+    const int nbhIdx0_1 = evTable[pidx + EdgeStride * 1];
+
+    const int nbhIdx1_0 = eeTable[pidx + EdgeStride * 0];
+    const int nbhIdx1_1 = eeTable[pidx + EdgeStride * 1];
+    const int nbhIdx1_2 = eeTable[pidx + EdgeStride * 2];
+    const int nbhIdx1_3 = eeTable[pidx + EdgeStride * 3];
+    const int nbhIdx1_4 = eeTable[pidx + EdgeStride * 4];
+    const int nbhIdx1_5 = eeTable[pidx + EdgeStride * 5];
+    const int nbhIdx1_6 = eeTable[pidx + EdgeStride * 6];
+    const int nbhIdx1_7 = eeTable[pidx + EdgeStride * 7];
+    const int nbhIdx1_8 = eeTable[pidx + EdgeStride * 8];
+    const int nbhIdx1_9 = eeTable[pidx + EdgeStride * 9];
+
+    int self_idx = kIter * EdgeStride + pidx;
+
+    ::dawn::float_type lhs_566 =
+        ((kh_smag_e[kIter * VertexStride + nbhIdx0_0] *
+          inv_dual_edge_length[nbhIdx0_0]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_0] + theta_v[nbhIdx1_1] +
+          theta_v[nbhIdx1_2] + theta_v[nbhIdx1_3] + theta_v[nbhIdx1_4])) +
+        ((kh_smag_e[kIter * VertexStride + nbhIdx0_1] *
+          inv_dual_edge_length[nbhIdx0_1]) *
+         (theta_v[self_idx] + theta_v[nbhIdx1_5] + theta_v[nbhIdx1_6] +
+          theta_v[nbhIdx1_7] + theta_v[nbhIdx1_8] + theta_v[nbhIdx1_9]));
+
+    z_temp[self_idx] = lhs_566;
   }
 }
 
@@ -53,6 +67,7 @@ class unroll_e_v_e_unroll {
 public:
   static const int E_V_SIZE = 2;
   static const int V_E_SIZE = 6;
+  static const int E_E_SIZE = 10;
 
   struct GpuTriMesh {
     int NumVertices;
@@ -65,6 +80,7 @@ public:
     dawn::unstructured_domain DomainUpper;
     int* evTable;
     int* veTable;
+    int* eeTable;
 
     GpuTriMesh() {}
 
@@ -107,6 +123,43 @@ public:
       kSize_ = kSize;
       is_setup_ = true;
       stream_ = stream;
+
+      int *eeTable_h = new int[E_E_SIZE * mesh_.EdgeStride];
+      int *veTable_h = new int[V_E_SIZE * mesh_.EdgeStride];
+      int *evTable_h = new int[E_V_SIZE * mesh_.VertexStride];
+
+      cudaMemcpy(veTable_h, mesh_.veTable,
+                sizeof(int) * V_E_SIZE * mesh_.EdgeStride, cudaMemcpyDeviceToHost);
+      cudaMemcpy(evTable_h, mesh_.evTable,
+                sizeof(int) * E_V_SIZE * mesh_.VertexStride,
+                cudaMemcpyDeviceToHost);
+
+      std::fill(eeTable_h, eeTable_h + mesh_.EdgeStride * E_E_SIZE, -1);
+
+      for (int elemIdx = 0; elemIdx < mesh_.EdgeStride; elemIdx++) {
+        int lin_idx = 0;
+        for (int nbhIter0 = 0; nbhIter0 < V_E_SIZE; nbhIter0++) {
+          int nbhIdx0 = evTable_h[elemIdx + mesh_.EdgeStride * nbhIter0];
+          if (nbhIdx0 == DEVICE_MISSING_VALUE) {
+            continue;
+          }
+          for (int nbhIter1 = 0; nbhIter1 < E_V_SIZE; nbhIter1++) {
+            int nbhIdx1 = veTable_h[nbhIdx0 + mesh_.VertexStride * nbhIter1];
+            if (nbhIdx1 == DEVICE_MISSING_VALUE) {
+              continue;
+            }
+            if (nbhIdx1 != nbhIdx0) {
+              eeTable_h[elemIdx + mesh_.EdgeStride * lin_idx] = nbhIdx1;
+              lin_idx++;
+            }
+          }
+        }
+      }
+
+      cudaMalloc((void **)&mesh_.eeTable,
+                sizeof(int) * mesh_.EdgeStride * E_E_SIZE);
+      cudaMemcpy(mesh_.eeTable, eeTable_h,
+                sizeof(int) * mesh_.EdgeStride * E_E_SIZE, cudaMemcpyHostToDevice);
     }
 
     dim3 grid(int kSize, int elSize, bool kparallel) {
@@ -138,9 +191,9 @@ public:
       int hoffset47 =
           mesh_.DomainLower({::dawn::LocationType::Edges, dawn::UnstructuredSubdomain::Nudging, 0});
       dim3 dG47 = grid(kSize_ + 0 - 0, hsize47, true);
-      unroll_e_v_e_unroll_stencil37_ms46_s47_kernel<V_E_SIZE, E_V_SIZE><<<dG47, dB, 0, stream_>>>(
-          mesh_.EdgeStride, mesh_.VertexStride, kSize_, hoffset47, hsize47, mesh_.veTable,
-          mesh_.evTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, z_temp_);
+      eve_kernel<<<dG47, dB, 0, stream_>>>(
+          mesh_.EdgeStride, mesh_.VertexStride, kSize_, hoffset47, hsize47, mesh_.evTable,
+          mesh_.eeTable, kh_smag_e_, inv_dual_edge_length_, theta_v_, z_temp_);
 #ifndef NDEBUG
 
       gpuErrchk(cudaPeekAtLastError());

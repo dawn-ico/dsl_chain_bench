@@ -188,7 +188,7 @@ ece_kernel(int EdgeStride, int CellStride, int kSize, int hOffset, int hSize,
     ::dawn::float_type lhs_566 =
         ((kh_smag_e[kIter * CellStride + nbhIdx0_0] *
           inv_dual_edge_length[nbhIdx0_0]) *
-         (theta_v[self] + theta_v[nbhIdx1_0] + theta_v[nbhIdx1_1]) +
+         (theta_v[self] + theta_v[nbhIdx1_0] + theta_v[nbhIdx1_1])) +
         ((kh_smag_e[kIter * CellStride + nbhIdx0_1] *
           inv_dual_edge_length[nbhIdx0_1]) *
          (theta_v[self] + theta_v[nbhIdx1_2] + theta_v[nbhIdx1_3]));
