@@ -140,15 +140,12 @@ public:
         int lin_idx = 0;
         for (int nbhIter0 = 0; nbhIter0 < E_V_SIZE; nbhIter0++) {
           int nbhIdx0 = evTable_h[elemIdx + mesh_.EdgeStride * nbhIter0];
-          if (nbhIdx0 == DEVICE_MISSING_VALUE) {
-            continue;
-          }
           for (int nbhIter1 = 0; nbhIter1 < V_E_SIZE; nbhIter1++) {
             int nbhIdx1 = veTable_h[nbhIdx0 + mesh_.VertexStride * nbhIter1];
             if (nbhIdx1 == DEVICE_MISSING_VALUE) {
               continue;
             }
-            if (nbhIdx1 != nbhIdx0) {
+            if (nbhIdx1 != elemIdx) {
               eeTable_h[elemIdx + mesh_.EdgeStride * lin_idx] = nbhIdx1;
               lin_idx++;
             }

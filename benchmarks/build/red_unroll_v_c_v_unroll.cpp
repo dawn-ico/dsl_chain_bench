@@ -155,7 +155,7 @@ public:
       int nbhIdx0 = vcTable_h[elemIdx + mesh_.VertexStride * nbhIter0];
       for (int nbhIter1 = 0; nbhIter1 < C_V_SIZE; nbhIter1++) {
         int nbhIdx1 = cvTable_h[nbhIdx0 + mesh_.CellStride * nbhIter1];
-        if (nbhIdx1 != nbhIdx0) {
+        if (nbhIdx1 != elemIdx) {
           nbh.insert(nbhIdx1);
         }
       }
