@@ -36,16 +36,16 @@ eve_kernel(int EdgeStride, int VertexStride, int kSize, int hOffset, int hSize,
     const int nbhIdx0_0 = evTable[pidx + EdgeStride * 0];
     const int nbhIdx0_1 = evTable[pidx + EdgeStride * 1];
 
-    const int nbhIdx1_0 = eeTable[pidx + EdgeStride * 0];
-    const int nbhIdx1_1 = eeTable[pidx + EdgeStride * 1];
-    const int nbhIdx1_2 = eeTable[pidx + EdgeStride * 2];
-    const int nbhIdx1_3 = eeTable[pidx + EdgeStride * 3];
-    const int nbhIdx1_4 = eeTable[pidx + EdgeStride * 4];
-    const int nbhIdx1_5 = eeTable[pidx + EdgeStride * 5];
-    const int nbhIdx1_6 = eeTable[pidx + EdgeStride * 6];
-    const int nbhIdx1_7 = eeTable[pidx + EdgeStride * 7];
-    const int nbhIdx1_8 = eeTable[pidx + EdgeStride * 8];
-    const int nbhIdx1_9 = eeTable[pidx + EdgeStride * 9];
+    const int nbhIdx1_0 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 0];
+    const int nbhIdx1_1 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 1];
+    const int nbhIdx1_2 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 2];
+    const int nbhIdx1_3 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 3];
+    const int nbhIdx1_4 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 4];
+    const int nbhIdx1_5 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 5];
+    const int nbhIdx1_6 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 6];
+    const int nbhIdx1_7 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 7];
+    const int nbhIdx1_8 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 8];
+    const int nbhIdx1_9 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 9];
 
     int self_idx = kIter * EdgeStride + pidx;
 

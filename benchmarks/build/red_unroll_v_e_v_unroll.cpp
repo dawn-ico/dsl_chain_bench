@@ -40,12 +40,12 @@ vev_kernel(int VertexStride, int EdgeStride, int kSize, int hOffset, int hSize,
     const int nbhIdx0_4 = veTable[pidx + VertexStride * 4];
     const int nbhIdx0_5 = veTable[pidx + VertexStride * 5];
 
-    const int nbhIdx1_0 = vvTable[pidx + VertexStride * 0];
-    const int nbhIdx1_1 = vvTable[pidx + VertexStride * 1];
-    const int nbhIdx1_2 = vvTable[pidx + VertexStride * 2];
-    const int nbhIdx1_3 = vvTable[pidx + VertexStride * 3];
-    const int nbhIdx1_4 = vvTable[pidx + VertexStride * 4];
-    const int nbhIdx1_5 = vvTable[pidx + VertexStride * 5];
+    const int nbhIdx1_0 = kIter * VertexStride + vvTable[pidx + VertexStride * 0];
+    const int nbhIdx1_1 = kIter * VertexStride + vvTable[pidx + VertexStride * 1];
+    const int nbhIdx1_2 = kIter * VertexStride + vvTable[pidx + VertexStride * 2];
+    const int nbhIdx1_3 = kIter * VertexStride + vvTable[pidx + VertexStride * 3];
+    const int nbhIdx1_4 = kIter * VertexStride + vvTable[pidx + VertexStride * 4];
+    const int nbhIdx1_5 = kIter * VertexStride + vvTable[pidx + VertexStride * 5];
 
     const int self_idx = kIter * VertexStride + pidx;
 
@@ -66,7 +66,7 @@ vev_kernel(int VertexStride, int EdgeStride, int kSize, int hOffset, int hSize,
                                   (theta_v[self_idx] + theta_v[nbhIdx1_4])) +
                                  ((kh_smag_e[kIter * EdgeStride + nbhIdx0_5] *
                                    inv_dual_edge_length[nbhIdx0_5]) *
-                                  (theta_v[self_idx] + theta_v[nbhIdx1_5]));
+                                  (theta_v[self_idx] + theta_v[nbhIdx1_5]));    
 
     z_temp[self_idx] = lhs_566;
   }
@@ -148,21 +148,19 @@ public:
       for (int elemIdx = 0; elemIdx < mesh_.VertexStride; elemIdx++) {
         int lin_idx = 0;
         for (int nbhIter0 = 0; nbhIter0 < V_E_SIZE; nbhIter0++) {
-          int nbhIdx0 = evTable_h[elemIdx + mesh_.VertexStride * nbhIter0];
-          if (nbhIdx0 == DEVICE_MISSING_VALUE) {
+          int nbhIdx0 = veTable_h[elemIdx + mesh_.VertexStride * nbhIter0];
+          if (nbhIdx0 == DEVICE_MISSING_VALUE) {            
             continue;
           }
           for (int nbhIter1 = 0; nbhIter1 < E_V_SIZE; nbhIter1++) {
-            int nbhIdx1 = veTable_h[nbhIdx0 + mesh_.EdgeStride * nbhIter1];
-            if (nbhIdx1 == DEVICE_MISSING_VALUE) {
-              continue;
-            }
-            if (nbhIdx1 != nbhIdx0) {
+            int nbhIdx1 = evTable_h[nbhIdx0 + mesh_.EdgeStride * nbhIter1];
+            if (nbhIdx1 != elemIdx) {
               vvTable_h[elemIdx + mesh_.VertexStride * lin_idx] = nbhIdx1;
               lin_idx++;
             }
           }
         }
+        assert(lin_idx <= V_V_SIZE);
       }
 
       cudaMalloc((void **)&mesh_.vvTable,

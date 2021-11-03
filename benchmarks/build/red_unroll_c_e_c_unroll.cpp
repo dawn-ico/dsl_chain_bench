@@ -37,9 +37,9 @@ cec_kernel(int CellStride, int EdgeStride, int kSize, int hOffset, int hSize,
     const int nbhIdx0_1 = ceTable[pidx + CellStride * 1];
     const int nbhIdx0_2 = ceTable[pidx + CellStride * 2];
 
-    const int nbhIdx1_0 = ccTable[pidx + CellStride * 0];
-    const int nbhIdx1_1 = ccTable[pidx + CellStride * 1];
-    const int nbhIdx1_2 = ccTable[pidx + CellStride * 2];
+    const int nbhIdx1_0 = kIter*CellStride + ccTable[pidx + CellStride * 0];
+    const int nbhIdx1_1 = kIter*CellStride + ccTable[pidx + CellStride * 1];
+    const int nbhIdx1_2 = kIter*CellStride + ccTable[pidx + CellStride * 2];    
 
     const int self_idx = kIter * CellStride + pidx;
 
@@ -51,7 +51,7 @@ cec_kernel(int CellStride, int EdgeStride, int kSize, int hOffset, int hSize,
                                   (theta_v[self_idx] + theta_v[nbhIdx1_1])) +
                                  ((kh_smag_e[kIter * EdgeStride + nbhIdx0_2] *
                                    inv_dual_edge_length[nbhIdx0_2]) *
-                                  (theta_v[self_idx] + theta_v[nbhIdx1_2]));
+                                  (theta_v[self_idx] + theta_v[nbhIdx1_2]));   
 
     z_temp[self_idx] = lhs_566;
   }
@@ -127,7 +127,7 @@ public:
   cudaMemcpy(ceTable_h, mesh_.ceTable,
              sizeof(int) * C_E_SIZE * mesh_.CellStride, cudaMemcpyDeviceToHost);
 
-  std::fill(ccTable_h, ccTable_h + mesh_.CellStride * C_C_SIZE, -1);
+  std::fill(ccTable_h, ccTable_h + mesh_.CellStride * C_C_SIZE, -1);  
 
   for (int elemIdx = 0; elemIdx < mesh_.CellStride; elemIdx++) {
     for (int nbhIter0 = 0; nbhIter0 < C_E_SIZE; nbhIter0++) {

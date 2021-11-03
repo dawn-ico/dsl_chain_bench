@@ -36,10 +36,10 @@ ece_kernel(int EdgeStride, int CellStride, int kSize, int hOffset, int hSize,
     const int nbhIdx0_0 = ecTable[pidx + EdgeStride * 0];
     const int nbhIdx0_1 = ecTable[pidx + EdgeStride * 1];
 
-    const int nbhIdx1_0 = eeTable[pidx + EdgeStride * 0];
-    const int nbhIdx1_1 = eeTable[pidx + EdgeStride * 1];
-    const int nbhIdx1_2 = eeTable[pidx + EdgeStride * 2];
-    const int nbhIdx1_3 = eeTable[pidx + EdgeStride * 3];
+    const int nbhIdx1_0 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 0];
+    const int nbhIdx1_1 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 1];
+    const int nbhIdx1_2 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 2];
+    const int nbhIdx1_3 = kIter * EdgeStride + eeTable[pidx + EdgeStride * 3];
 
     int self_idx = kIter * EdgeStride + pidx;
 
@@ -139,7 +139,7 @@ public:
             if (nbhIdx1 == DEVICE_MISSING_VALUE) {
               continue;
             }
-            if (nbhIdx1 != nbhIdx0) {
+            if (nbhIdx1 != elemIdx) {
               eeTable_h[elemIdx + mesh_.EdgeStride * lin_idx] = nbhIdx1;
               lin_idx++;
             }

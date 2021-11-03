@@ -39,20 +39,20 @@ cvc_kernel(int CellStride, int VertexStride, int kSize, int hOffset, int hSize,
     const int nbhIdx0_1 = cvTable[pidx + CellStride * 1];
     const int nbhIdx0_2 = cvTable[pidx + CellStride * 2];
 
-    const int nbhIdx1_00 = ccTable[pidx + CellStride * 0];
-    const int nbhIdx1_01 = ccTable[pidx + CellStride * 1];
-    const int nbhIdx1_02 = ccTable[pidx + CellStride * 2];
-    const int nbhIdx1_03 = ccTable[pidx + CellStride * 3];
+    const int nbhIdx1_00 = kIter * CellStride + ccTable[pidx + CellStride * 0];
+    const int nbhIdx1_01 = kIter * CellStride + ccTable[pidx + CellStride * 1];
+    const int nbhIdx1_02 = kIter * CellStride + ccTable[pidx + CellStride * 2];
+    const int nbhIdx1_03 = kIter * CellStride + ccTable[pidx + CellStride * 3];
 
-    const int nbhIdx1_04 = ccTable[pidx + CellStride * 4];
-    const int nbhIdx1_05 = ccTable[pidx + CellStride * 5];
-    const int nbhIdx1_06 = ccTable[pidx + CellStride * 6];
-    const int nbhIdx1_07 = ccTable[pidx + CellStride * 7];
+    const int nbhIdx1_04 = kIter * CellStride + ccTable[pidx + CellStride * 4];
+    const int nbhIdx1_05 = kIter * CellStride + ccTable[pidx + CellStride * 5];
+    const int nbhIdx1_06 = kIter * CellStride + ccTable[pidx + CellStride * 6];
+    const int nbhIdx1_07 = kIter * CellStride + ccTable[pidx + CellStride * 7];
 
-    const int nbhIdx1_08 = ccTable[pidx + CellStride * 8];
-    const int nbhIdx1_09 = ccTable[pidx + CellStride * 9];
-    const int nbhIdx1_10 = ccTable[pidx + CellStride * 10];
-    const int nbhIdx1_11 = ccTable[pidx + CellStride * 11];
+    const int nbhIdx1_08 = kIter * CellStride + ccTable[pidx + CellStride * 8];
+    const int nbhIdx1_09 = kIter * CellStride + ccTable[pidx + CellStride * 9];
+    const int nbhIdx1_10 = kIter * CellStride + ccTable[pidx + CellStride * 10];
+    const int nbhIdx1_11 = kIter * CellStride + ccTable[pidx + CellStride * 11];
 
     int self_idx = kIter * CellStride + pidx;
 

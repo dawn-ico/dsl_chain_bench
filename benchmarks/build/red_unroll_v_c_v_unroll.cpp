@@ -42,12 +42,12 @@ vcv_kernel(int VertexStride, int CellStride, int kSize, int hOffset, int hSize,
     const int nbhIdx0_4 = vcTable[pidx + VertexStride * 4];
     const int nbhIdx0_5 = vcTable[pidx + VertexStride * 5];
 
-    const int nbhIdx1_0 = vvTable[pidx + VertexStride * 0];
-    const int nbhIdx1_1 = vvTable[pidx + VertexStride * 1];
-    const int nbhIdx1_2 = vvTable[pidx + VertexStride * 2];
-    const int nbhIdx1_3 = vvTable[pidx + VertexStride * 3];
-    const int nbhIdx1_4 = vvTable[pidx + VertexStride * 4];
-    const int nbhIdx1_5 = vvTable[pidx + VertexStride * 5];
+    const int nbhIdx1_0 = kIter * VertexStride + vvTable[pidx + VertexStride * 0];
+    const int nbhIdx1_1 = kIter * VertexStride + vvTable[pidx + VertexStride * 1];
+    const int nbhIdx1_2 = kIter * VertexStride + vvTable[pidx + VertexStride * 2];
+    const int nbhIdx1_3 = kIter * VertexStride + vvTable[pidx + VertexStride * 3];
+    const int nbhIdx1_4 = kIter * VertexStride + vvTable[pidx + VertexStride * 4];
+    const int nbhIdx1_5 = kIter * VertexStride + vvTable[pidx + VertexStride * 5];
 
     int self_idx = kIter * VertexStride + pidx;
 

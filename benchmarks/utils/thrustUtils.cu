@@ -13,6 +13,7 @@ struct prg {
             thrust::default_random_engine rng;
             thrust::uniform_real_distribution<double> dist(0, 1);
             rng.discard(n);            
+            // return 1.;
             return dist(rng);
         }
 };
