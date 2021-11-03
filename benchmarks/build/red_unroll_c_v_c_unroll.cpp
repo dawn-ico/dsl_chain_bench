@@ -65,20 +65,7 @@ cvc_kernel(int CellStride, int VertexStride, int kSize, int hOffset, int hSize,
          (theta_v[self_idx] + theta_v[nbhIdx1_04] + theta_v[nbhIdx1_05] + theta_v[nbhIdx1_06] + theta_v[nbhIdx1_07] + theta_v[nbhIdx1_08])) + 
         ((kh_smag_e[kIter * VertexStride + nbhIdx0_2] *
           inv_dual_edge_length[nbhIdx0_2]) *
-         (theta_v[self_idx] + theta_v[nbhIdx1_08] + theta_v[nbhIdx1_09] + theta_v[nbhIdx1_10] + theta_v[nbhIdx1_11] + theta_v[nbhIdx1_00]));
-
-    if (pidx - hOffset == 100) {
-      printf("%d %d %d %d %d %d\n", self_idx, nbhIdx1_00, nbhIdx1_01, nbhIdx1_02, nbhIdx1_03, nbhIdx1_04);
-      printf("%d %d %d %d %d %d\n", self_idx, nbhIdx1_04, nbhIdx1_05, nbhIdx1_06, nbhIdx1_07, nbhIdx1_08);
-      printf("%d %d %d %d %d %d\n", self_idx, nbhIdx1_08, nbhIdx1_09, nbhIdx1_10, nbhIdx1_11, nbhIdx1_00);
-      // printf("%f %f %f\n", 
-      //   (theta_v[self_idx] + theta_v[nbhIdx1_00] + theta_v[nbhIdx1_01] + theta_v[nbhIdx1_02] + theta_v[nbhIdx1_03] + theta_v[nbhIdx1_04]), 
-      //   (theta_v[self_idx] + theta_v[nbhIdx1_04] + theta_v[nbhIdx1_05] + theta_v[nbhIdx1_06] + theta_v[nbhIdx1_07] + theta_v[nbhIdx1_08]),
-      //   (theta_v[self_idx] + theta_v[nbhIdx1_08] + theta_v[nbhIdx1_09] + theta_v[nbhIdx1_10] + theta_v[nbhIdx1_11] + theta_v[nbhIdx1_00])
-      // );
-      printf("%f\n", lhs_566);
-      printf("--------------------\n");
-    }
+         (theta_v[self_idx] + theta_v[nbhIdx1_08] + theta_v[nbhIdx1_09] + theta_v[nbhIdx1_10] + theta_v[nbhIdx1_11] + theta_v[nbhIdx1_00]));    
 
     z_temp[self_idx] = lhs_566;
   }
@@ -156,8 +143,7 @@ public:
                 cudaMemcpyDeviceToHost);
 
       std::fill(ccTable_h, ccTable_h + mesh_.CellStride * C_C_SIZE, -1);
-
-      int num_incomplete_tours = 0;
+      
       for (int elemIdx = 0; elemIdx < mesh_.CellStride; elemIdx++) {       
         std::vector<std::set<int>> nbhs;
         for (int nbhIter0 = 0; nbhIter0 < C_V_SIZE; nbhIter0++) {
@@ -166,10 +152,7 @@ public:
           for (int nbhIter1 = 0; nbhIter1 < V_C_SIZE; nbhIter1++) {
             int nbhIdx1 = vcTable_h[nbhIdx0 + mesh_.VertexStride * nbhIter1];
             if (nbhIdx1 != elemIdx) {
-              nbh.insert(nbhIdx1);
-              if (elemIdx == 3260) {
-                printf("nbhIdx %d %d\n", nbhIdx0, nbhIdx1);
-              }
+              nbh.insert(nbhIdx1);              
             }
           }
           // would like to put this but this isn't true
@@ -201,28 +184,13 @@ public:
 
           int anchor_left = *intersect_left.begin();
           int anchor_right = *intersect_right.begin();
-
-          if (elemIdx == 3260) {            
-            printf("al %d ar %d\n", anchor_left, anchor_right);
-            printf("size: %d\n", nbhs[cur].size());
-          }
           
-          tour.push_back(anchor_left);
-          if (elemIdx == 3260) {            
-            printf("inserting %d\n", anchor_left);
-          }
+          tour.push_back(anchor_left);          
           for (auto it = nbhs[cur].begin(); it != nbhs[cur].end(); ++it) {
             if (*it != anchor_left && *it != anchor_right) {
-              tour.push_back(*it);
-              if (elemIdx == 3260) {            
-                printf("inserting %d\n", *it);
-              }
+              tour.push_back(*it);              
             }
-          }
-          // tour.push_back(anchor_right);
-          // if (elemIdx == 3260) {            
-          //   printf("inserting %d\n", anchor_right);
-          // }
+          }          
 
           if (ahead == 0) {
             break;
@@ -240,22 +208,11 @@ public:
         }
 
         // would like to put this but this isn't true due to boundaries
-        // assert(tour.size() == C_C_SIZE);
-        if (tour.size() != C_C_SIZE) {
-          num_incomplete_tours++;
-        }
-        if (elemIdx == 3260) {            
-          printf("tour:\n");
-        }
-        for (int lin_idx = 0; lin_idx < C_C_SIZE; lin_idx++) {
-          if (elemIdx == 3260) {
-            printf("%d\n", tour[lin_idx]);
-          }
+        // assert(tour.size() == C_C_SIZE);                
+        for (int lin_idx = 0; lin_idx < C_C_SIZE; lin_idx++) {          
           ccTable_h[elemIdx + mesh_.CellStride * lin_idx] = tour[lin_idx];
         }
-      }
-
-      printf("number of incomplete tours: %d\n", num_incomplete_tours);
+      }     
 
       cudaMalloc((void **)&mesh_.ccTable,
                 sizeof(int) * mesh_.CellStride * C_C_SIZE);
