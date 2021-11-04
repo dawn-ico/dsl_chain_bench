@@ -8,6 +8,7 @@
 #include "driver-includes/math.hpp"
 #include <chrono>
 #include <set>
+#include <deque>
 #include <assert.h>
 #define BLOCK_SIZE 128
 #define LEVELS_PER_THREAD 1
@@ -69,7 +70,7 @@ vcv_kernel(int VertexStride, int CellStride, int kSize, int hOffset, int hSize,
          (theta_v[self_idx] + theta_v[nbhIdx1_4] + theta_v[nbhIdx1_5])) +
         ((kh_smag_e[kIter * CellStride + nbhIdx0_5] *
           inv_dual_edge_length[nbhIdx0_5]) *
-         (theta_v[self_idx] + theta_v[nbhIdx1_5] + theta_v[nbhIdx1_0]));
+         (theta_v[self_idx] + theta_v[nbhIdx1_5] + theta_v[nbhIdx1_0]));    
 
     z_temp[self_idx] = lhs_566;
   }
@@ -145,14 +146,84 @@ public:
   cudaMemcpy(cvTable_h, mesh_.cvTable,
              sizeof(int) * C_V_SIZE * mesh_.CellStride,
              cudaMemcpyDeviceToHost);
+  
+  //note vc table does not build a tour! we need to reorder!
+  int *vcTableOrdered_h = new int[V_C_SIZE * mesh_.VertexStride];
+  for (int vertexIdx = 0; vertexIdx < mesh_.VertexStride; vertexIdx++) {
+    //do not make an attempt to reorder if vcv touches the boundary
+    bool skip = false;
+    for (int nbhIter0 = 0; nbhIter0 < V_C_SIZE; nbhIter0++) {      
+      int nbhIdx0 = vcTable_h[vertexIdx + mesh_.VertexStride * nbhIter0];      
+      if (nbhIdx0 == DEVICE_MISSING_VALUE) {
+        skip = true;
+        break;
+      }
+    }
+    if (skip) {
+      continue;
+    }   
+
+    int rootCell = vcTable_h[vertexIdx + mesh_.VertexStride * 0];
+
+    std::set<int> visited;
+    std::deque<int> tour;
+
+    tour.push_front(rootCell);
+    visited.insert(rootCell);
+
+    std::set<int> rootCellNodes;        
+    for (int nbhIter0 = 0; nbhIter0 < C_V_SIZE; nbhIter0++) {
+      rootCellNodes.insert(cvTable_h[rootCell + mesh_.CellStride * nbhIter0]);
+    }
+
+
+    while (tour.size() != 6) {
+      for (int nbhIter0 = 0; nbhIter0 < V_C_SIZE; nbhIter0++) {
+        int candCell = vcTable_h[vertexIdx + mesh_.VertexStride * nbhIter0];
+        std::set<int> candCellNodes;
+        for (int nbhIter1 = 0; nbhIter1 < C_V_SIZE; nbhIter1++) {
+          candCellNodes.insert(cvTable_h[candCell + mesh_.CellStride * nbhIter1]);
+        }
+        std::set<int> intersect;
+        set_intersection(rootCellNodes.begin(), rootCellNodes.end(), candCellNodes.begin(),
+                          candCellNodes.end(),
+                          std::inserter(intersect, intersect.begin()));
+        if (intersect.size() == 2 && visited.count(candCell) == 0) {
+          tour.push_front(candCell);
+          visited.insert(candCell);
+          rootCell = candCell;
+          rootCellNodes = candCellNodes;
+        }
+      }      
+    }
+
+    for (int lin_idx = 0; lin_idx < V_C_SIZE; lin_idx++) {
+      vcTableOrdered_h[vertexIdx + mesh_.VertexStride * lin_idx] = tour[lin_idx];
+    }   
+  }
 
   std::fill(vvTable_h, vvTable_h + mesh_.VertexStride * V_V_SIZE, -1);
 
-  for (int elemIdx = 0; elemIdx < mesh_.VertexStride; elemIdx++) {    
+  for (int elemIdx = 0; elemIdx < mesh_.VertexStride; elemIdx++) {
+    // we rely on the reordering from before, which we couldn't do at the boundary,
+    // so let's skip the boundary here too and rely on the compute domain to never touch 
+    // the boundary
+    bool skip = false;
+    for (int nbhIter0 = 0; nbhIter0 < V_C_SIZE; nbhIter0++) {      
+      int nbhIdx0 = vcTable_h[elemIdx + mesh_.VertexStride * nbhIter0];      
+      if (nbhIdx0 == DEVICE_MISSING_VALUE) {
+        skip = true;
+        break;
+      }
+    }
+    if (skip) {
+      continue;
+    }
+
     std::vector<std::set<int>> nbhs;
     for (int nbhIter0 = 0; nbhIter0 < V_C_SIZE; nbhIter0++) {
       std::set<int> nbh;
-      int nbhIdx0 = vcTable_h[elemIdx + mesh_.VertexStride * nbhIter0];
+      int nbhIdx0 = vcTableOrdered_h[elemIdx + mesh_.VertexStride * nbhIter0];
       for (int nbhIter1 = 0; nbhIter1 < C_V_SIZE; nbhIter1++) {
         int nbhIdx1 = cvTable_h[nbhIdx0 + mesh_.CellStride * nbhIter1];
         if (nbhIdx1 != elemIdx) {
@@ -178,17 +249,18 @@ public:
                        nbhs[behind].end(),
                        std::inserter(intersect_left, intersect_left.begin()));
 
+      // we skip the boundary, hence we can keep strong assertions here
       assert(intersect_right.size() == 1);
       assert(intersect_left.size() == 1);
 
       int anchor_left = *intersect_left.begin();
       int anchor_right = *intersect_right.begin();
+      tour.push_back(anchor_left);
       for (auto it = nbhs[cur].begin(); it != nbhs[cur].end(); ++it) {
         if (*it != anchor_left && *it != anchor_right) {
           tour.push_back(*it);
         }
-      }
-      tour.push_back(anchor_right);
+      }      
 
       if (ahead == 0) {
         break;
@@ -205,6 +277,7 @@ public:
       }
     }
 
+    // we skip the boundary, hence we can keep strong assertions here
     assert(tour.size() == V_V_SIZE);
     for (int lin_idx = 0; lin_idx < V_V_SIZE; lin_idx++) {
       vvTable_h[elemIdx + mesh_.VertexStride * lin_idx] = tour[lin_idx];
@@ -213,8 +286,13 @@ public:
 
   cudaMalloc((void **)&mesh_.vvTable,
           sizeof(int) * mesh_.VertexStride * V_V_SIZE);
+  
   cudaMemcpy(mesh_.vvTable, vvTable_h,
              sizeof(int) * mesh_.VertexStride * V_V_SIZE,
+             cudaMemcpyHostToDevice);
+
+  cudaMemcpy(mesh_.vcTable, vcTableOrdered_h,
+             sizeof(int) * mesh_.VertexStride * V_C_SIZE,
              cudaMemcpyHostToDevice);
 }
 
