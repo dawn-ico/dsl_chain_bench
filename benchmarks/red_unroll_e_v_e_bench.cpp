@@ -26,7 +26,7 @@ int main() {
   atlas::Mesh mesh = *AtlasMeshFromNetCDFComplete("grid.nc");
   dawn::GlobalGpuTriMesh gpu_tri_mesh = atlasToGlobalGpuTriMesh(mesh);
   const int num_lev = 65;
-  const int num_runs = 100000;
+  const int num_runs = 1e5;
 
   const size_t end_size = mesh.edges().size()*num_lev;
   const size_t mid_size = mesh.nodes().size()*num_lev;
