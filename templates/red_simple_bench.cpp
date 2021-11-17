@@ -5,8 +5,8 @@
 
 #include <numeric>
 
-#include "red_{CHAIN_LETTERS}_inline.h"
-#include "red_{CHAIN_LETTERS}_sequential.h"
+#include "red_simple_{CHAIN_LETTERS}_inline.h"
+#include "red_simple_{CHAIN_LETTERS}_sequential.h"
 
 template<typename... Args>
 double run_and_time(void (*fun) (Args... args), Args... args) {
