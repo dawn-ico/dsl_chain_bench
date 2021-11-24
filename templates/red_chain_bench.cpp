@@ -44,7 +44,7 @@ int main() {
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Edges, dawn::UnstructuredSubdomain::Halo, 0, 30714);
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Halo, 0, 10375);
   
-  setup_red_chain_{CHAIN_LETTERS}_inline(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);  
+  setup_red_chain_{CHAIN_LETTERS}_inline(&gpu_tri_mesh, num_lev, (cudaStream_t) 0, num_lev);  
 
   std::vector<double> times_inlined;
   for (int i = 0; i < num_runs; i++) {
