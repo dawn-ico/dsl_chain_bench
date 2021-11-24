@@ -65,8 +65,8 @@ int main() {
   gpu_tri_mesh.set_splitter_index_upper(dawn::LocationType::Vertices, dawn::UnstructuredSubdomain::Halo, 0, 10375);
 
 
-  setup_unroll_c_e_c_inline(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
-  setup_unroll_c_e_c_unroll(&gpu_tri_mesh, num_lev, (cudaStream_t) 0);
+  setup_unroll_c_e_c_inline(&gpu_tri_mesh, num_lev, (cudaStream_t) 0, num_lev);
+  setup_unroll_c_e_c_unroll(&gpu_tri_mesh, num_lev, (cudaStream_t) 0, num_lev);
 
   std::vector<double> times_inlined;
   std::vector<double> times_unrolled;
