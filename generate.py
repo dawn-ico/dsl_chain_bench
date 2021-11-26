@@ -1,7 +1,7 @@
 from enum import Enum
 import itertools
 
-NAME="simple"
+NAME="unroll"
 
 class Location(Enum):
   Edge = 0
