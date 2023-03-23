@@ -145,6 +145,7 @@ function (compile_benchmark sten_full_path)
   target_link_libraries(${sten_bench} PRIVATE thrustUtils)
   target_link_libraries(${sten_bench} PRIVATE ${sten})
   target_link_libraries(${sten_bench} PRIVATE atlasUtilsLib)   
+  target_include_directories(${sten_bench} PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 endfunction()
 
 file(GLOB benches CONFIGURE_DEPENDS "*_bench.cpp")
