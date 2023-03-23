@@ -7,6 +7,6 @@ void run_unroll_c_e_c_inline_from_fort_host(dawn::GlobalGpuTriMesh *mesh, int k_
 void run_unroll_c_e_c_inline(::dawn::float_type *kh_smag_e, ::dawn::float_type *inv_dual_edge_length, ::dawn::float_type *theta_v, ::dawn::float_type *z_temp) ;
 bool verify_unroll_c_e_c_inline(const ::dawn::float_type *z_temp_dsl, const ::dawn::float_type *z_temp, const double z_temp_rel_tol, const double z_temp_abs_tol, const int iteration) ;
 void run_and_verify_unroll_c_e_c_inline(::dawn::float_type *kh_smag_e, ::dawn::float_type *inv_dual_edge_length, ::dawn::float_type *theta_v, ::dawn::float_type *z_temp, ::dawn::float_type *z_temp_before, const double z_temp_rel_tol, const double z_temp_abs_tol) ;
-void setup_unroll_c_e_c_inline(dawn::GlobalGpuTriMesh *mesh, int k_size, cudaStream_t stream, const int z_temp_k_size) ;
+void setup_unroll_c_e_c_inline(dawn::GlobalGpuTriMesh *mesh, int k_size, cudaStream_t stream) ;
 void free_unroll_c_e_c_inline() ;
 }
